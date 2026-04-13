@@ -169,6 +169,16 @@
   .btn-gen:hover:not(:disabled) { opacity: .88; }
   .btn-gen:disabled { opacity: .5; cursor: wait; }
 
+  .btn-convert {
+    width: 100%; padding: 13px;
+    background: transparent; color: var(--dark);
+    border: 2px solid var(--dark); border-radius: var(--radius);
+    font-size: 14px; font-weight: 600; cursor: pointer;
+    margin-top: 10px; transition: all .15s;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+  }
+  .btn-convert:hover { background: var(--light); }
+
   .status {
     margin-top: 10px; padding: 10px 14px;
     border-radius: var(--radius); font-size: 13px; display: none;
@@ -361,6 +371,9 @@
   <button class="btn-gen" id="btn-gen" onclick="generar()">
     ⬇ Xerar e descargar documento Word
   </button>
+  <button class="btn-convert" id="btn-convert" onclick="convertirAFactura()" style="display:none;">
+    ↗ Converter en Factura / Convertir en Factura
+  </button>
   <div class="status" id="status"></div>
 
 </div>
@@ -384,6 +397,48 @@ function switchTab(t) {
   document.querySelectorAll('.tab').forEach((el, i) => el.classList.toggle('active', i === (t === 'presuposto' ? 0 : 1)));
   document.getElementById('page-presuposto').classList.toggle('active', t === 'presuposto');
   document.getElementById('page-factura').classList.toggle('active',    t === 'factura');
+  document.getElementById('btn-convert').style.display = t === 'presuposto' ? 'flex' : 'none';
+}
+
+function convertirAFactura() {
+  const cnome  = strVal('p-cnome');
+  const cnif   = strVal('p-cnif');
+  const cdir   = strVal('p-cdir');
+  const ccp    = strVal('p-ccp');
+  const ivaPct = document.getElementById('p-iva').value;
+  const pNum = strVal('p-num');
+  const match = pNum.match(/(\d+)/);
+  const nextNum = match ? match[1] + '/26' : '';
+  switchTab('factura');
+  document.getElementById('f-cnome').value = cnome;
+  document.getElementById('f-cnif').value  = cnif;
+  document.getElementById('f-cdir').value  = cdir;
+  document.getElementById('f-ccp').value   = ccp;
+  document.getElementById('f-num').value   = nextNum;
+  document.getElementById('f-fecha').value = new Date().toISOString().split('T')[0];
+  document.getElementById('f-iva').value = ivaPct;
+  const fLineas = document.getElementById('f-lineas');
+  fLineas.innerHTML = '';
+  cnt.f = 0;
+  document.getElementById('p-lineas').querySelectorAll('.item-row').forEach(row => {
+    const id = row.id.split('-').pop();
+    const ud       = document.getElementById('p-ud-'       + id)?.value || '1';
+    const concepto = document.getElementById('p-concepto-' + id)?.value || '';
+    const precio   = document.getElementById('p-precio-'   + id)?.value || '0';
+    const subtotal = document.getElementById('p-subtotal-' + id)?.value || '0';
+    addLinea('f');
+    const nid = cnt.f;
+    document.getElementById('f-ud-'       + nid).value = ud;
+    document.getElementById('f-concepto-' + nid).value = concepto;
+    document.getElementById('f-precio-'   + nid).value = precio;
+    document.getElementById('f-subtotal-' + nid).value = subtotal;
+  });
+  calc('f');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  const st = document.getElementById('status');
+  st.className = 'status ok';
+  st.style.display = 'block';
+  st.textContent = '✓ Datos do orzamento copiados á factura. Revisa o nº de factura e o banco antes de xerar.';
 }
 
 function selectBank(b) {
@@ -395,7 +450,7 @@ function selectBank(b) {
 function addLinea(px) {
   const id  = ++cnt[px];
   const box = document.getElementById(px + '-lineas');
-  const div = document.createElement('div');
+  const div = document.createElement('dij');
   div.className = 'item-row';
   div.id = px + '-linea-' + id;
   div.innerHTML = `
@@ -406,8 +461,6 @@ function addLinea(px) {
     <button class="btn-del" onclick="delLinea('${px}',${id})">×</button>
   `;
   box.appendChild(div);
-
-  // Auto-calculate subtotal when price changes
   document.getElementById(px + '-precio-' + id).addEventListener('input', () => calcRow(px, id));
   document.getElementById(px + '-ud-'     + id).addEventListener('input', () => calcRow(px, id));
 }
@@ -457,7 +510,7 @@ function getLineas(px) {
 
 function numVal(id) { return parseFloat(document.getElementById(id)?.value || 0).toFixed(2); }
 function strVal(id) { return (document.getElementById(id)?.value || '').trim(); }
-function rawNum(id) { return document.getElementById(id)?.textContent.replace(/\s€/, '').replace(',', '.') || '0'; }
+function rawNum(id) { return document.getElementById(id)?.textContent.replace(/\s+€/, '').replace(',', '.') || '0'; }
 
 function buildPayload() {
   const ivaPct = document.getElementById(tab === 'presuposto' ? 'p-iva' : 'f-iva').value;
@@ -504,7 +557,7 @@ function buildPayload() {
   }
 }
 
-async function generar() {
+arync function generar() {
   const btn = document.getElementById('btn-gen');
   const st  = document.getElementById('status');
   btn.disabled = true;
@@ -527,7 +580,6 @@ async function generar() {
       throw new Error(err.error || 'Erro no servidor');
     }
 
-    // Trigger download
     const blob     = await resp.blob();
     const url      = URL.createObjectURL(blob);
     const a        = document.createElement('a');
@@ -538,7 +590,7 @@ async function generar() {
     URL.revokeObjectURL(url);
 
     st.className = 'status ok';
-    st.textContent = '✓ Documento descargado: ' + filename;
+    st.textContent = '✓' Documento descargado: ' + filename;
   } catch(e) {
     st.className = 'status err';
     st.textContent = 'Erro: ' + e.message;
@@ -555,6 +607,8 @@ document.getElementById('p-validez').value = in3m.toISOString().split('T')[0];
 
 addLinea('p');
 addLinea('f');
+
+document.getElementById('btn-convert').style.display = 'flex';
 </script>
 </body>
 </html>
