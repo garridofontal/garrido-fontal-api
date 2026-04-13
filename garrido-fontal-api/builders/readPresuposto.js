@@ -10,7 +10,13 @@ async function readPresuposto(buffer) {
     base: '', ivaVal: '', total: '', notas: '',
   };
 
-  const toNum = s => String(s).replace(/\./g, '').replace(',', '.');
+  const toNum = s => {
+    const str = String(s).trim();
+    // Spanish format "1.461,00" → "1461.00"
+    if (str.includes(',')) return str.replace(/\./g, '').replace(',', '.');
+    // Already decimal "1461.00" or "1767.81"
+    return str.replace(/[^0-9.]/g, '');
+  };
 
   // ── CLIENTE ───────────────────────────────────────────────────────────────
   // Formato real de mammoth con esta app:
