@@ -10,99 +10,150 @@ async function readPresuposto(buffer) {
     base: '', ivaVal: '', total: '', notas: '',
   };
 
-  const toNum = s => s.replace(/\./g, '').replace(',', '.');
+  const toNum = s => String(s).replace(/\./g, '').replace(',', '.');
 
   // ── CLIENTE ───────────────────────────────────────────────────────────────
+  // Formato real de mammoth con esta app:
+  //   "Cliente:"       <- línea sola
+  //   "Carmen Pita Castro"
+  //   "NIF/CIF:"
+  //   "33808393A"
+  //   "Enderezo:"
+  //   "Rúa Armónica Nº 42, 2ºB"
+  //   "C.P.:"
+  //   "27002 Lugo"
+
   for (let i = 0; i < lines.length; i++) {
     const l = lines[i];
 
-    if (/^Cliente:/i.test(l)) {
-      const m = l.replace(/^Cliente:\s*/i, '').replace(/\s{2,}.*$/, '').trim();
-      if (m) data.cnome = m;
-      for (let j = i + 1; j < Math.min(i + 5, lines.length); j++) {
-        const nx = lines[j];
-        if (/^Enderezo:|^Válido|^Obxecto|^NIF|^CIF/i.test(nx)) break;
-        if (/^\d{5}\s/.test(nx)) { data.ccp = nx; break; }
-        if (/^Rúa|^Avda|^Praza|^Calle|^C\//i.test(nx)) data.cdir = nx;
-      }
+    if (/^Cliente:$/i.test(l) && !data.cnome) {
+      data.cnome = lines[i + 1] || '';
     }
-
-    if (/^Enderezo:/i.test(l)) {
-      const addr = l.replace(/^Enderezo:\s*/i, '').replace(/\s{2,}.*$/, '').trim();
-      if (/^\d{5}/.test(addr)) data.ccp  = addr;
-      else if (addr)            data.cdir = addr;
+    if (/^NIF\/CIF:$/i.test(l) && !data.cnif) {
+      data.cnif = lines[i + 1] || '';
     }
-
-    if (!data.cnif && /^[A-Z]-?\d{6,8}$|^\d{8}[A-Z]$|^[A-Z]\d{7}[A-Z]$/.test(l)) data.cnif = l;
-    if (!data.ccp  && /^\d{5}\s+\w/.test(l)) data.ccp = l;
+    if (/^Enderezo:$/i.test(l) && !data.cdir) {
+      data.cdir = lines[i + 1] || '';
+    }
+    if (/^C\.P\.:$/i.test(l) && !data.ccp) {
+      data.ccp = lines[i + 1] || '';
+    }
   }
 
   // ── TOTAIS ────────────────────────────────────────────────────────────────
-  for (const l of lines) {
-    const bM = l.match(/[Bb]ase[^0-9€]*([\d.]+,\d{2})\s*€/);
-    if (bM && !data.base) data.base = toNum(bM[1]);
-
-    const iM = l.match(/IVA\s+(\d+)%[^0-9€]*([\d.]+,\d{2})\s*€/i);
-    if (iM) { data.ivaPct = iM[1]; data.ivaVal = toNum(iM[2]); }
-
-    const tM = l.match(/^TOTAL[^0-9€]*([\d.]+,\d{2})\s*€/i);
-    if (tM && !data.total) data.total = toNum(tM[1]);
-  }
-
-  // ── PARTIDAS ──────────────────────────────────────────────────────────────
-  let inItems = false;
-  let current = null;
+  // Formato real:
+  //   "Base impoñible / Base imponible:"
+  //   "1461.00"          <- línea siguiente (sin €)
+  //   "IVA 21%:"
+  //   "306.81"
+  //   "TOTAL:"
+  //   "1767.81"
 
   for (let i = 0; i < lines.length; i++) {
     const l = lines[i];
 
-    if (/Concepto\s*\/\s*Descripci/i.test(l))                              { inItems = true; continue; }
-    if (/^Notas\s*\//i.test(l) || /^Base\s+impo/i.test(l) || /^Forma\s+de\s+pago/i.test(l)) { inItems = false; current = null; }
+    if (/^Base impo/i.test(l) && !data.base) {
+      const next = lines[i + 1] || '';
+      const m = next.match(/^[\d.,]+/);
+      if (m) data.base = toNum(m[0]);
+    }
+
+    const ivaM = l.match(/^IVA\s+(\d+)%/i);
+    if (ivaM && !data.ivaVal) {
+      data.ivaPct = ivaM[1];
+      const next = lines[i + 1] || '';
+      const m = next.match(/^[\d.,]+/);
+      if (m) data.ivaVal = toNum(m[0]);
+    }
+
+    if (/^TOTAL:$/i.test(l) && !data.total) {
+      const next = lines[i + 1] || '';
+      const m = next.match(/^[\d.,]+/);
+      if (m) data.total = toNum(m[0]);
+    }
+
+    // También por si vienen en la misma línea con €
+    const bInline = l.match(/[Bb]ase[^0-9€]*([\d.]+,\d{2})\s*€/);
+    if (bInline && !data.base) data.base = toNum(bInline[1]);
+
+    const iInline = l.match(/IVA\s+(\d+)%[^0-9€]*([\d.]+,\d{2})\s*€/i);
+    if (iInline && !data.ivaVal) { data.ivaPct = iInline[1]; data.ivaVal = toNum(iInline[2]); }
+
+    const tInline = l.match(/^TOTAL[^0-9€]*([\d.]+,\d{2})\s*€/i);
+    if (tInline && !data.total) data.total = toNum(tInline[1]);
+  }
+
+  // ── PARTIDAS ──────────────────────────────────────────────────────────────
+  // Formato real de mammoth:
+  //   "1"                                         <- ud sola
+  //   "Montaxe de VELUX SK06..."                  <- concepto galego
+  //   "Montaje de VELUX SK06..."                  <- concepto castellano (itálica)
+  //   "1461.00 €"                                 <- precio
+  //   "1461.00 €"                                 <- subtotal
+
+  let inItems  = false;
+  let state    = null; // null | 'gotUd' | 'gotConcepto'
+  let current  = null;
+
+  for (let i = 0; i < lines.length; i++) {
+    const l = lines[i];
+
+    if (/^(Ud\.|Concepto|Prezo|Precio|Total)/i.test(l)) { inItems = true; continue; }
+    if (/^Notas\s*\//i.test(l) || /^Base\s+impo/i.test(l) || /^Forma\s+de\s+pago/i.test(l)) {
+      inItems = false; current = null; state = null;
+    }
     if (!inItems) continue;
-    if (/^Prezo\s+Ud|^Precio\s+Ud|^Total\s+s\/IVA|^Ud\s*\./i.test(l))     continue;
-    if (/^Piso\s+\d|^Planta\s+\d/i.test(l))                               { current = null; continue; }
 
-    // Tab-separated row
-    const tp = l.split('\t').map(p => p.trim()).filter(Boolean);
-    if (tp.length >= 2 && /^\d+$/.test(tp[0])) {
-      const pM = (tp[2]||'').match(/([\d.]+,\d{2})/);
-      const sM = (tp[3]||'').match(/([\d.]+,\d{2})/);
-      current = { ud: tp[0], concepto: tp[1],
-        precio:   pM ? toNum(pM[1]) : '0',
-        subtotal: sM ? toNum(sM[1]) : (pM ? toNum(pM[1]) : '0') };
-      data.lineas.push(current);
+    // Precio suelto "1461.00 €" o "1.461,00 €"
+    const priceM = l.match(/^([\d.,]+)\s*€\s*$/);
+
+    // Ud sola (solo dígitos)
+    if (/^\d+$/.test(l) && !priceM) {
+      if (current && state === 'gotUd') {
+        // Ud anterior sin concepto, saltar
+      }
+      current = { ud: l, concepto: '', precio: '0', subtotal: '0' };
+      state = 'gotUd';
       continue;
     }
 
-    // Space-separated: "1  Concepto  1.461,00 €  1.461,00 €"
-    const m2 = l.match(/^(\d+)\s{2,}(.+?)\s{2,}([\d.]+,\d{2})\s*€\s+([\d.]+,\d{2})\s*€/);
-    if (m2) { current = { ud:m2[1], concepto:m2[2].trim(), precio:toNum(m2[3]), subtotal:toNum(m2[4]) }; data.lineas.push(current); continue; }
-
-    const m3 = l.match(/^(\d+)\s{2,}(.+?)\s{2,}([\d.]+,\d{2})\s*€/);
-    if (m3) { current = { ud:m3[1], concepto:m3[2].trim(), precio:toNum(m3[3]), subtotal:toNum(m3[3]) }; data.lineas.push(current); continue; }
-
-    const m4 = l.match(/^(\d+)\s{2,}(.+)$/);
-    if (m4 && !/^\d{1,2}\/\d{2}\/\d{4}/.test(m4[2])) {
-      current = { ud:m4[1], concepto:m4[2].trim(), precio:'0', subtotal:'0' };
-      data.lineas.push(current);
+    // Precio: "1461.00 €"
+    if (priceM && current) {
+      const val = toNum(priceM[1]);
+      if (current.precio === '0') {
+        current.precio   = val;
+        current.subtotal = val;
+      } else if (current.subtotal === current.precio) {
+        current.subtotal = val;
+        // Item completo — añadir si tiene concepto
+        if (current.concepto) data.lineas.push(current);
+        current = null; state = null;
+      }
       continue;
     }
 
-    // Continuation
-    if (current) {
-      const pO = l.match(/^([\d.]+,\d{2})\s*€\s*$/);
-      if (pO) { if (current.precio==='0') { current.precio=toNum(pO[1]); current.subtotal=current.precio; } continue; }
-      if (/^[—–]$/.test(l) || /^[-─═]+$/.test(l)) continue;
-      if (!current.concepto.includes('\n') && l.length > 3 && !/^[A-ZÁÉÍÓÚ].*:$/.test(l)) {
+    // Em-dash = precio incluido
+    if (/^[—–]$/.test(l)) continue;
+
+    // Concepto
+    if (current && state === 'gotUd' && l.length > 2) {
+      current.concepto = l;
+      state = 'gotConcepto';
+      continue;
+    }
+
+    // Segunda línea del concepto (traducción castellano)
+    if (current && state === 'gotConcepto' && l.length > 2 && !priceM) {
+      if (!current.concepto.includes('\n')) {
         current.concepto += '\n' + l;
       }
+      continue;
     }
   }
 
-  // IVA fallback
-  if (data.base && data.total && !data.ivaVal) {
-    const b = parseFloat(data.base), t = parseFloat(data.total);
-    if (b && t) { data.ivaVal = (t-b).toFixed(2); data.ivaPct = String(Math.round(((t-b)/b)*100)); }
+  // Añadir último item si quedó pendiente
+  if (current && current.concepto && current.precio !== '0') {
+    data.lineas.push(current);
   }
 
   return data;
