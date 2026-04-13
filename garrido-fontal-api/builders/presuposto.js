@@ -98,6 +98,16 @@ function buildPresuposto(d) {
   });
 
   // ── Notes ──────────────────────────────────────────────────────────────────
+  // Build note lines — use custom notas if provided, else default text
+  const notaLines = d.notas && d.notas.trim()
+    ? d.notas.trim().split('\n').filter(l => l.trim()).map(l =>
+        para('• ' + l.trim(), { size: 17, color: C.GRAY_TEXT })
+      )
+    : [
+        para('• Non se inclúen remates interiores nin pintura / No se incluyen remates interiores ni pintura.', { size: 17, color: C.GRAY_TEXT }),
+        para('• Os prezos inclúen man de obra e materiais VELUX / Los precios incluyen mano de obra y materiales VELUX.', { size: 17, color: C.GRAY_TEXT }),
+      ];
+
   const notesTable = new Table({
     width: { size: 9326, type: WidthType.DXA }, columnWidths: [9326],
     rows: [new TableRow({ children: [new TableCell({
@@ -106,8 +116,7 @@ function buildPresuposto(d) {
       margins: { top: 120, bottom: 120, left: 200, right: 200 },
       children: [
         para('Notas / Notas:', { size: 18, bold: true, color: C.DARK }),
-        para('• Non se inclúen remates interiores nin pintura / No se incluyen remates interiores ni pintura.', { size: 17, color: C.GRAY_TEXT }),
-        para('• Os prezos inclúen man de obra e materiais VELUX / Los precios incluyen mano de obra y materiales VELUX.', { size: 17, color: C.GRAY_TEXT }),
+        ...notaLines,
       ],
     })]})],
   });
@@ -194,18 +203,18 @@ function buildPresuposto(d) {
 
   return new Document({
     sections: [{
-      properties: { page: { size: { width: 11906, height: 16838 }, margin: { top: 1000, right: 1000, bottom: 1000, left: 1000 } } },
+      properties: { page: { size: { width: 11906, height: 16838 }, margin: { top: 800, right: 900, bottom: 800, left: 900 } } },
       footers: { default: buildFooter() },
       children: [
         buildHeader(), buildSeparator(), titleTable,
-        emptyPara(120), metaTable, objPara,
-        emptyPara(80), itemsTable,
-        emptyPara(80), notesTable,
-        emptyPara(120), buildTotals(d.base, d.ivaPct, d.ivaVal, d.total),
-        emptyPara(200),
+        emptyPara(80), metaTable, objPara,
+        emptyPara(60), itemsTable,
+        emptyPara(60), notesTable,
+        emptyPara(80), buildTotals(d.base, d.ivaPct, d.ivaVal, d.total),
+        emptyPara(100),
         para('Forma de pago / Forma de pago:', { size: 20, bold: true, color: C.DARK }),
-        emptyPara(120), payTable,
-        emptyPara(240), sigTable,
+        emptyPara(80), payTable,
+        emptyPara(120), sigTable,
       ],
     }],
   });
