@@ -22,7 +22,10 @@ app.get('/health', (_req, res) => res.json({ ok: true }));
 app.post('/api/ler-presuposto', upload.single('file'), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: 'No se recibiu ningún arquivo' });
+    const mammoth = require('mammoth');
+    const raw = await mammoth.extractRawText({ buffer: req.file.buffer });
     const data = await readPresuposto(req.file.buffer);
+    data.rawLines = raw.value.split('\n').map(l => l.trim()).filter(Boolean);
     res.json(data);
   } catch (e) {
     console.error(e);
