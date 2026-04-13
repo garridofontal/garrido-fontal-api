@@ -212,6 +212,7 @@
   <div class="tabs">
     <div class="tab active" onclick="switchTab('presuposto')">Orzamento / Presupuesto</div>
     <div class="tab"        onclick="switchTab('factura')">Factura</div>
+    <div class="tab"        onclick="switchTab('converter')">Converter en Factura</div>
   </div>
 
   <!-- ══════════════════ PRESUPOSTO ══════════════════ -->
@@ -371,10 +372,33 @@
   <button class="btn-gen" id="btn-gen" onclick="generar()">
     ⬇ Xerar e descargar documento Word
   </button>
-  <button class="btn-convert" id="btn-convert" onclick="convertirAFactura()" style="display:none;">
-    ↗ Converter en Factura / Convertir en Factura
-  </button>
   <div class="status" id="status"></div>
+
+  <!-- ══════════════════ CONVERTER ══════════════════ -->
+  <div id="page-converter" class="page">
+
+    <div class="section">
+      <div class="section-title">Cargar orzamento Word / Cargar presupuesto Word</div>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:14px;">
+        Sube o arquivo <strong>.docx</strong> do orzamento xerado. Os datos cargaranse no formulario de factura para que os poidas revisar e modificar antes de xerar.
+      </p>
+      <div id="drop-zone" style="
+        border: 2px dashed var(--border); border-radius: var(--radius);
+        padding: 40px 20px; text-align: center; cursor: pointer;
+        transition: all .15s; background: var(--white);
+      " onclick="document.getElementById('file-input').click()"
+         ondragover="event.preventDefault();this.style.borderColor='var(--dark)';this.style.background='var(--light)'"
+         ondragleave="this.style.borderColor='var(--border)';this.style.background='var(--white)'"
+         ondrop="handleDrop(event)">
+        <div style="font-size:32px;margin-bottom:8px;">📄</div>
+        <div style="font-size:15px;font-weight:500;color:var(--text);">Arrastra o .docx aquí ou preme para seleccionar</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:4px;">Só arquivos .docx xerados por esta aplicación</div>
+        <input type="file" id="file-input" accept=".docx" style="display:none" onchange="handleFileSelect(event)" />
+      </div>
+      <div id="conv-status" style="margin-top:12px;font-size:13px;display:none;"></div>
+    </div>
+
+  </div>
 
 </div>
 
@@ -394,38 +418,144 @@ function setPayMode(mode) {
 
 function switchTab(t) {
   tab = t;
-  document.querySelectorAll('.tab').forEach((el, i) => el.classList.toggle('active', i === (t === 'presuposto' ? 0 : 1)));
+  document.querySelectorAll('.tab').forEach((el, i) =>
+    el.classList.toggle('active', i === ['presuposto','factura','converter'].indexOf(t))
+  );
   document.getElementById('page-presuposto').classList.toggle('active', t === 'presuposto');
   document.getElementById('page-factura').classList.toggle('active',    t === 'factura');
-  document.getElementById('btn-convert').style.display = t === 'presuposto' ? 'flex' : 'none';
+  document.getElementById('page-converter').classList.toggle('active',  t === 'converter');
+  document.getElementById('btn-gen').style.display = t === 'converter' ? 'none' : 'flex';
+}
+
+// ── Converter: load presuposto .docx → prefill factura form ──────────────────
+
+function handleDrop(e) {
+  e.preventDefault();
+  document.getElementById('drop-zone').style.borderColor = 'var(--border)';
+  document.getElementById('drop-zone').style.background  = 'var(--white)';
+  const file = e.dataTransfer.files[0];
+  if (file) processFile(file);
+}
+
+function handleFileSelect(e) {
+  const file = e.target.files[0];
+  if (file) processFile(file);
+}
+
+async function processFile(file) {
+  if (!file.name.endsWith('.docx')) {
+    showConvStatus('err', 'O arquivo debe ser un .docx xerado por esta aplicación.');
+    return;
+  }
+  showConvStatus('loading', 'Lendo o arquivo...');
+
+  try {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const resp = await fetch('/api/ler-presuposto', { method: 'POST', body: formData });
+    if (!resp.ok) throw new Error((await resp.json()).error || resp.statusText);
+
+    const d = await resp.json();
+    fillFacturaFromPresuposto(d);
+    showConvStatus('ok', '✓ Datos cargados. Podes revisalos na pestaña "Factura" antes de xerar.');
+
+    // Switch to factura tab after short delay so user sees the confirmation
+    setTimeout(() => switchTab('factura'), 1200);
+
+  } catch(e) {
+    showConvStatus('err', 'Erro ao ler o arquivo: ' + e.message);
+  }
+}
+
+function showConvStatus(type, msg) {
+  const el = document.getElementById('conv-status');
+  el.style.display = 'block';
+  el.style.background = type === 'ok' ? '#e1f5ee' : type === 'err' ? '#faece7' : 'var(--light)';
+  el.style.color      = type === 'ok' ? 'var(--success)' : type === 'err' ? 'var(--error)' : 'var(--muted)';
+  el.style.padding    = '10px 14px';
+  el.style.borderRadius = 'var(--radius)';
+  el.textContent = msg;
+}
+
+function fillFacturaFromPresuposto(d) {
+  // Client
+  document.getElementById('f-cnome').value = d.cnome || '';
+  document.getElementById('f-cnif').value  = d.cnif  || '';
+  document.getElementById('f-cdir').value  = d.cdir  || '';
+  document.getElementById('f-ccp').value   = d.ccp   || '';
+
+  // Date = today
+  document.getElementById('f-fecha').value = new Date().toISOString().split('T')[0];
+
+  // IVA
+  const ivaEl = document.getElementById('f-iva');
+  if (d.ivaPct === '10') ivaEl.value = '10'; else ivaEl.value = '21';
+
+  // Lines — clear and rebuild
+  const container = document.getElementById('f-lineas');
+  container.innerHTML = '';
+  cnt.f = 0;
+
+  (d.lineas || []).forEach(l => {
+    addLinea('f');
+    const id = cnt.f;
+    document.getElementById('f-ud-'       + id).value = l.ud       || '1';
+    document.getElementById('f-concepto-' + id).value = l.concepto || '';
+    document.getElementById('f-precio-'   + id).value = l.precio   || '0';
+    document.getElementById('f-subtotal-' + id).value = l.subtotal || '0';
+  });
+
+  // Recalculate totals
+  calc('f');
+
+  // Clear factura number so user sets it fresh
+  document.getElementById('f-num').value = '';
+
+  // Notes hint
+  document.getElementById('f-notas').value = d.notas || '';
 }
 
 function convertirAFactura() {
+  // Collect all data from presuposto form
   const cnome  = strVal('p-cnome');
   const cnif   = strVal('p-cnif');
   const cdir   = strVal('p-cdir');
   const ccp    = strVal('p-ccp');
   const ivaPct = document.getElementById('p-iva').value;
+
+  // Build next factura number from presuposto number
   const pNum = strVal('p-num');
   const match = pNum.match(/(\d+)/);
   const nextNum = match ? match[1] + '/26' : '';
+
+  // Switch to factura tab
   switchTab('factura');
+
+  // Fill client data
   document.getElementById('f-cnome').value = cnome;
   document.getElementById('f-cnif').value  = cnif;
   document.getElementById('f-cdir').value  = cdir;
   document.getElementById('f-ccp').value   = ccp;
   document.getElementById('f-num').value   = nextNum;
   document.getElementById('f-fecha').value = new Date().toISOString().split('T')[0];
+
+  // Set same IVA
   document.getElementById('f-iva').value = ivaPct;
+
+  // Copy lines — clear existing and recreate
   const fLineas = document.getElementById('f-lineas');
   fLineas.innerHTML = '';
   cnt.f = 0;
-  document.getElementById('p-lineas').querySelectorAll('.item-row').forEach(row => {
+
+  const pLineas = document.getElementById('p-lineas');
+  pLineas.querySelectorAll('.item-row').forEach(row => {
     const id = row.id.split('-').pop();
     const ud       = document.getElementById('p-ud-'       + id)?.value || '1';
     const concepto = document.getElementById('p-concepto-' + id)?.value || '';
     const precio   = document.getElementById('p-precio-'   + id)?.value || '0';
     const subtotal = document.getElementById('p-subtotal-' + id)?.value || '0';
+
     addLinea('f');
     const nid = cnt.f;
     document.getElementById('f-ud-'       + nid).value = ud;
@@ -433,7 +563,10 @@ function convertirAFactura() {
     document.getElementById('f-precio-'   + nid).value = precio;
     document.getElementById('f-subtotal-' + nid).value = subtotal;
   });
+
   calc('f');
+
+  // Scroll to top and show confirmation
   window.scrollTo({ top: 0, behavior: 'smooth' });
   const st = document.getElementById('status');
   st.className = 'status ok';
@@ -450,7 +583,7 @@ function selectBank(b) {
 function addLinea(px) {
   const id  = ++cnt[px];
   const box = document.getElementById(px + '-lineas');
-  const div = document.createElement('dij');
+  const div = document.createElement('div');
   div.className = 'item-row';
   div.id = px + '-linea-' + id;
   div.innerHTML = `
@@ -461,6 +594,8 @@ function addLinea(px) {
     <button class="btn-del" onclick="delLinea('${px}',${id})">×</button>
   `;
   box.appendChild(div);
+
+  // Auto-calculate subtotal when price changes
   document.getElementById(px + '-precio-' + id).addEventListener('input', () => calcRow(px, id));
   document.getElementById(px + '-ud-'     + id).addEventListener('input', () => calcRow(px, id));
 }
@@ -510,7 +645,7 @@ function getLineas(px) {
 
 function numVal(id) { return parseFloat(document.getElementById(id)?.value || 0).toFixed(2); }
 function strVal(id) { return (document.getElementById(id)?.value || '').trim(); }
-function rawNum(id) { return document.getElementById(id)?.textContent.replace(/\s+€/, '').replace(',', '.') || '0'; }
+function rawNum(id) { return document.getElementById(id)?.textContent.replace(/\s€/, '').replace(',', '.') || '0'; }
 
 function buildPayload() {
   const ivaPct = document.getElementById(tab === 'presuposto' ? 'p-iva' : 'f-iva').value;
@@ -580,6 +715,7 @@ async function generar() {
       throw new Error(err.error || 'Erro no servidor');
     }
 
+    // Trigger download
     const blob     = await resp.blob();
     const url      = URL.createObjectURL(blob);
     const a        = document.createElement('a');
@@ -590,7 +726,7 @@ async function generar() {
     URL.revokeObjectURL(url);
 
     st.className = 'status ok';
-    st.textContent = '✓' Documento descargado: ' + filename;
+    st.textContent = '✓ Documento descargado: ' + filename;
   } catch(e) {
     st.className = 'status err';
     st.textContent = 'Erro: ' + e.message;
@@ -607,8 +743,6 @@ document.getElementById('p-validez').value = in3m.toISOString().split('T')[0];
 
 addLinea('p');
 addLinea('f');
-
-document.getElementById('btn-convert').style.display = 'flex';
 </script>
 </body>
 </html>
