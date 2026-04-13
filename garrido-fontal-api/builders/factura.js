@@ -8,6 +8,7 @@ const {
   labelCell, valueCell,
   buildHeader, buildSeparator, buildFooter, buildTotals,
   headerItemCell, conceptCell, numCell, buildMetaTable,
+  formatDate,
 } = require('./helpers');
 
 function buildFactura(d) {
@@ -40,7 +41,7 @@ function buildFactura(d) {
         margins: { top: 150, bottom: 150, left: 150, right: 150 },
         children: [
           para('Data / Fecha:', { size: 16, bold: true, color: C.GRAY_LINE }),
-          para(d.fecha || '—', { size: 20, bold: true, color: C.WHITE }),
+          para(formatDate(d.fecha), { size: 20, bold: true, color: C.WHITE }),
         ],
       }),
     ]})],

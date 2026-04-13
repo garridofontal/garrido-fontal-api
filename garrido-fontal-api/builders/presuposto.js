@@ -8,6 +8,7 @@ const {
   labelCell, valueCell,
   buildHeader, buildSeparator, buildFooter, buildTotals,
   headerItemCell, conceptCell, numCell, buildMetaTable,
+  formatDate,
 } = require('./helpers');
 
 function buildPresuposto(d) {
@@ -40,7 +41,7 @@ function buildPresuposto(d) {
         margins: { top: 150, bottom: 150, left: 150, right: 150 },
         children: [
           para('Data / Fecha:', { size: 16, bold: true, color: C.GRAY_LINE }),
-          para(d.fecha || '—',  { size: 20, bold: true, color: C.WHITE }),
+          para(formatDate(d.fecha),  { size: 20, bold: true, color: C.WHITE }),
         ],
       }),
     ]})],
@@ -52,7 +53,7 @@ function buildPresuposto(d) {
      labelCell('NIF/CIF:', 1500), valueCell(d.cnif || '—', 2000)],
     [labelCell('Enderezo:', 1500), valueCell(d.cdir || '—', 4326),
      labelCell('C.P.:', 1500), valueCell(d.ccp || '—', 2000)],
-    [labelCell('Válido ata:', 1500), valueCell(d.validez || '—', 4326),
+    [labelCell('Válido ata:', 1500), valueCell(formatDate(d.validez), 4326),
      new TableCell({ borders: noBorder(), width: { size: 3500, type: WidthType.DXA }, columnSpan: 2,
        margins: { top: 80, bottom: 80, left: 0, right: 0 }, children: [para('')] })],
   ]);
