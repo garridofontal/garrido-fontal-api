@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="gl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Garrido Fontal SLU — Documentos</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --dark:    #2E4A4A;
+    --mid:     #3D5C5C;
+    --light:   #F4F7F7;
+    --accent:  #CC2929;
+    --gray:    #555;
+    --border:  #D8DDDD;
+    --bg:      #F7F9F9;
+    --white:   #FFFFFF;
+    --text:    #1A2A2A;
+    --muted:   #6B7B7B;
+    --success: #0F6E56;
+    --error:   #993C1D;
+    --radius:  8px;
+  }
+
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg); color: var(--text); font-size: 14px;
+    min-height: 100vh;
+  }
+
+  .topbar {
+    background: var(--dark); color: #fff;
+    padding: 14px 24px; display: flex; align-items: center; gap: 14px;
+    position: sticky; top: 0; z-index: 10;
+    box-shadow: 0 2px 8px rgba(0,0,0,.2);
+  }
+  .topbar-logo {
+    width: 40px; height: 40px; border-radius: 50%;
+    background: rgba(255,255,255,.15);
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 15px; color: #fff; flex-shrink: 0;
+  }
+  .topbar h1 { font-size: 17px; font-weight: 600; }
+  .topbar p  { font-size: 12px; opacity: .65; margin-top: 1px; }
+
+  .main { max-width: 820px; margin: 0 auto; padding: 24px 16px 48px; }
+
+  .tabs {
+    display: flex; gap: 8px; margin-bottom: 20px;
+  }
+  .tab {
+    flex: 1; padding: 11px; text-align: center;
+    border: 1px solid var(--border); border-radius: var(--radius);
+    background: var(--white); cursor: pointer;
+    font-size: 14px; font-weight: 500; color: var(--muted);
+    transition: all .15s;
+  }
+  .tab.active { background: var(--dark); color: #fff; border-color: var(--dark); }
+
+  .section {
+    background: var(--white); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 16px 18px; margin-bottom: 12px;
+  }
+  .section-title {
+    font-size: 10px; font-weight: 600; color: var(--muted);
+    text-transform: uppercase; letter-spacing: .07em;
+    margin-bottom: 12px; padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+  .full  { grid-column: 1 / -1; }
+
+  .field label { font-size: 11px; color: var(--muted); display: block; margin-bottom: 4px; }
+  input, select, textarea {
+    width: 100%; padding: 8px 10px; font-size: 14px;
+    border: 1px solid var(--border); border-radius: var(--radius);
+    background: var(--white); color: var(--text);
+    transition: border-color .15s;
+  }
+  input:focus, select:focus, textarea:focus {
+    outline: none; border-color: var(--dark);
+  }
+  textarea { min-height: 56px; resize: vertical; }
+
+  /* Items table */
+  .items-head {
+    display: grid; grid-template-columns: 54px 1fr 105px 105px 34px;
+    gap: 6px; margin-bottom: 5px;
+    font-size: 10px; font-weight: 600; color: var(--muted);
+    text-transform: uppercase; letter-spacing: .06em;
+  }
+  .item-row {
+    display: grid; grid-template-columns: 54px 1fr 105px 105px 34px;
+    gap: 6px; margin-bottom: 6px; align-items: start;
+  }
+  .item-row textarea { min-height: 48px; font-size: 13px; line-height: 1.45; }
+  .item-row input    { font-size: 13px; }
+
+  .btn-del {
+    width: 34px; height: 36px; border-radius: var(--radius);
+    border: 1px solid #f0bfbf; background: #fdf0f0; color: var(--error);
+    cursor: pointer; font-size: 18px; display: flex; align-items: center; justify-content: center;
+  }
+  .btn-del:hover { background: #fce0e0; }
+
+  .btn-add {
+    width: 100%; padding: 8px 12px; border-radius: var(--radius);
+    border: 1px dashed var(--border); background: transparent;
+    color: var(--muted); cursor: pointer; font-size: 13px;
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+    margin-top: 6px;
+  }
+  .btn-add:hover { background: var(--light); }
+
+  /* Totals */
+  .totals {
+    display: flex; flex-direction: column; align-items: flex-end;
+    gap: 5px; padding-top: 14px; margin-top: 10px;
+    border-top: 1px solid var(--border);
+  }
+  .total-row { display: flex; gap: 20px; align-items: center; }
+  .total-row .lbl { font-size: 12px; color: var(--muted); width: 160px; text-align: right; }
+  .total-row .val { font-size: 14px; min-width: 90px; text-align: right; font-variant-numeric: tabular-nums; }
+  .total-big      { font-size: 20px; font-weight: 600; color: var(--dark); }
+
+  /* IVA select inline */
+  .iva-row { display: flex; gap: 20px; align-items: center; }
+  .iva-row .lbl { font-size: 12px; color: var(--muted); width: 160px; text-align: right; }
+  .iva-row select { width: 90px; font-size: 13px; }
+
+  /* Pay mode toggle */
+  .pay-mode { display: flex; gap: 8px; }
+  .pay-btn {
+    flex: 1; padding: 10px 14px; border-radius: var(--radius);
+    border: 1px solid var(--border); background: var(--white);
+    cursor: pointer; font-size: 13px; color: var(--muted);
+    display: flex; flex-direction: column; gap: 3px; transition: all .15s;
+  }
+  .pay-btn strong { font-size: 14px; color: var(--text); }
+  .pay-btn span   { font-size: 12px; }
+  .pay-btn.active {
+    background: var(--light); border-color: var(--dark);
+    color: var(--dark);
+  }
+  .pay-btn.active strong { color: var(--dark); }
+
+  /* Bank toggle */
+  .bank-toggle { display: flex; gap: 8px; }
+  .bank-btn {
+    flex: 1; padding: 9px 10px; border-radius: var(--radius);
+    border: 1px solid var(--border); background: var(--white);
+    cursor: pointer; font-size: 12px; color: var(--muted); text-align: center;
+    transition: all .15s;
+  }
+  .bank-btn.active { background: var(--light); border-color: var(--dark); color: var(--dark); font-weight: 500; }
+
+  /* Generate button */
+  .btn-gen {
+    width: 100%; padding: 15px;
+    background: var(--dark); color: #fff;
+    border: none; border-radius: var(--radius);
+    font-size: 15px; font-weight: 600; cursor: pointer;
+    margin-top: 20px; transition: opacity .15s;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+  }
+  .btn-gen:hover:not(:disabled) { opacity: .88; }
+  .btn-gen:disabled { opacity: .5; cursor: wait; }
+
+  .btn-convert {
+    width: 100%; padding: 13px;
+    background: transparent; color: var(--dark);
+    border: 2px solid var(--dark); border-radius: var(--radius);
+    font-size: 14px; font-weight: 600; cursor: pointer;
+    margin-top: 10px; transition: all .15s;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+  }
+  .btn-convert:hover { background: var(--light); }
+
+  .status {
+    margin-top: 10px; padding: 10px 14px;
+    border-radius: var(--radius); font-size: 13px; display: none;
+  }
+  .status.ok      { background: #e1f5ee; color: var(--success); display: block; }
+  .status.err     { background: #faece7; color: var(--error);   display: block; }
+  .status.loading { background: var(--light); color: var(--muted); display: block; }
+
+  .page { display: none; }
+  .page.active { display: block; }
+
+  @media (max-width: 580px) {
+    .grid2, .grid3 { grid-template-columns: 1fr; }
+    .full { grid-column: auto; }
+    .items-head, .item-row { grid-template-columns: 44px 1fr 80px 80px 30px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-logo">GF</div>
+  <div>
+    <h1>Garrido Fontal SLU</h1>
+    <p>Xerador de orzamentos e facturas</p>
+  </div>
+</div>
+
+<div class="main">
+
+  <div class="tabs">
+    <div class="tab active" onclick="switchTab('presuposto')">Orzamento / Presupuesto</div>
+    <div class="tab"        onclick="switchTab('factura')">Factura</div>
+  </div>
+
+  <!-- ══════════════════ PRESUPOSTO ══════════════════ -->
+  <div id="page-presuposto" class="page active">
+
+    <div class="section">
+      <div class="section-title">Datos do documento</div>
+      <div class="grid3">
+        <div class="field"><label>Nº Orzamento</label><input id="p-num" placeholder="P26-001" /></div>
+        <div class="field"><label>Data / Fecha</label><input id="p-fecha" type="date" /></div>
+        <div class="field"><label>Válido ata / Válido hasta</label><input id="p-validez" type="date" /></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Cliente</div>
+      <div class="grid2">
+        <div class="field full"><label>Nome / Nombre</label><input id="p-cnome" placeholder="Comunidade de Propietarios..." /></div>
+        <div class="field"><label>NIF / CIF</label><input id="p-cnif" placeholder="H-27XXXXXX" /></div>
+        <div class="field"><label>Enderezo / Dirección</label><input id="p-cdir" placeholder="Rúa..." /></div>
+        <div class="field"><label>C.P. / Localidade</label><input id="p-ccp" placeholder="27002 Lugo" /></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Obxecto / Objeto</div>
+      <input id="p-objeto" placeholder="Cambio de ventás de tellado / Sustitución de ventanas de tejado..." />
+    </div>
+
+    <div class="section">
+      <div class="section-title">Partidas</div>
+      <div class="items-head">
+        <span>Ud.</span><span>Concepto (1ª liña galego · 2ª liña castellano)</span>
+        <span style="text-align:right">Prezo Ud.</span>
+        <span style="text-align:right">Subtotal</span>
+        <span></span>
+      </div>
+      <div id="p-lineas"></div>
+      <button class="btn-add" onclick="addLinea('p')">+ Engadir partida</button>
+
+      <div class="totals">
+        <div class="iva-row">
+          <span class="lbl">IVA</span>
+          <select id="p-iva" style="width:90px;font-size:13px;" onchange="calc('p')">
+            <option value="10">10 %</option>
+            <option value="21" selected>21 %</option>
+          </select>
+        </div>
+        <div class="total-row"><span class="lbl">Base impoñible</span><span class="val" id="p-base">0,00 €</span></div>
+        <div class="total-row"><span class="lbl">IVA</span><span class="val" id="p-ivaval">0,00 €</span></div>
+        <div class="total-row"><span class="lbl">TOTAL</span><span class="val total-big" id="p-total">0,00 €</span></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Forma de pago</div>
+
+      <div class="pay-mode">
+        <div class="pay-btn active" id="pay-unico" onclick="setPayMode('unico')">
+          <strong>Pago único</strong>
+          <span>Abónase todo ao finalizar</span>
+        </div>
+        <div class="pay-btn" id="pay-dous" onclick="setPayMode('dous')">
+          <strong>Dous pagos / Dos pagos</strong>
+          <span>1ª factura provisión · 2ª man de obra</span>
+        </div>
+      </div>
+
+      <div id="bloque-unico" style="margin-top:12px;">
+        <div class="field"><label>Importe total (€ — podes deixalo baleiro e usarase o total calculado)</label>
+          <input id="p-pagoUnico" type="number" step="0.01" placeholder="Déixalo baleiro para usar o total automático" />
+        </div>
+      </div>
+
+      <div id="bloque-dous" style="margin-top:12px; display:none;">
+        <div class="grid2">
+          <div class="field">
+            <label>1ª Factura — Provisión de materiais (€)</label>
+            <input id="p-pago1" type="number" step="0.01" placeholder="0.00" />
+          </div>
+          <div class="field">
+            <label>2ª Factura — Man de obra ao finalizar (€)</label>
+            <input id="p-pago2" type="number" step="0.01" placeholder="0.00" />
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ══════════════════ FACTURA ══════════════════ -->
+  <div id="page-factura" class="page">
+
+    <div class="section">
+      <div class="section-title">Datos da factura</div>
+      <div class="grid3">
+        <div class="field"><label>Nº Factura</label><input id="f-num" placeholder="32/26" /></div>
+        <div class="field"><label>Data / Fecha</label><input id="f-fecha" type="date" /></div>
+        <div></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Cliente</div>
+      <div class="grid2">
+        <div class="field full"><label>Nome / Nombre</label><input id="f-cnome" placeholder="Carmen Pita Castro" /></div>
+        <div class="field"><label>NIF / CIF</label><input id="f-cnif" placeholder="33808393A" /></div>
+        <div class="field"><label>Enderezo / Dirección</label><input id="f-cdir" placeholder="Rúa Armónica Nº 42, 2ºB" /></div>
+        <div class="field"><label>C.P. / Localidade</label><input id="f-ccp" placeholder="27002 Lugo" /></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Partidas</div>
+      <div class="items-head">
+        <span>Ud.</span><span>Concepto</span>
+        <span style="text-align:right">Prezo Ud.</span>
+        <span style="text-align:right">Subtotal</span>
+        <span></span>
+      </div>
+      <div id="f-lineas"></div>
+      <button class="btn-add" onclick="addLinea('f')">+ Engadir partida</button>
+
+      <div class="totals">
+        <div class="iva-row">
+          <span class="lbl">IVA</span>
+          <select id="f-iva" style="width:90px;font-size:13px;" onchange="calc('f')">
+            <option value="10">10 %</option>
+            <option value="21" selected>21 %</option>
+          </select>
+        </div>
+        <div class="total-row"><span class="lbl">Base impoñible</span><span class="val" id="f-base">0,00 €</span></div>
+        <div class="total-row"><span class="lbl">IVA</span><span class="val" id="f-ivaval">0,00 €</span></div>
+        <div class="total-row"><span class="lbl">TOTAL</span><span class="val total-big" id="f-total">0,00 €</span></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Conta bancaria</div>
+      <div class="bank-toggle">
+        <div class="bank-btn active" id="btn-bbva"     onclick="selectBank('bbva')">
+          <strong>BBVA</strong><br>ES74 0182 0625 8202 0183 4454
+        </div>
+        <div class="bank-btn"        id="btn-sabadell" onclick="selectBank('sabadell')">
+          <strong>Sabadell</strong><br>ES12 0081 0497 7400 0148 7849
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Notas (opcional)</div>
+      <textarea id="f-notas" placeholder="Ex: Factura de provisión de materiais. Pendente segunda factura de man de obra ao finalizar..."></textarea>
+    </div>
+
+  </div>
+
+  <button class="btn-gen" id="btn-gen" onclick="generar()">
+    ⬇ Xerar e descargar documento Word
+  </button>
+  <button class="btn-convert" id="btn-convert" onclick="convertirAFactura()" style="display:none;">
+    ↗ Converter en Factura / Convertir en Factura
+  </button>
+  <div class="status" id="status"></div>
+
+</div>
+
+<script>
+let tab  = 'presuposto';
+let bank = 'bbva';
+let payMode = 'unico';
+let cnt  = { p: 0, f: 0 };
+
+function setPayMode(mode) {
+  payMode = mode;
+  document.getElementById('pay-unico').classList.toggle('active', mode === 'unico');
+  document.getElementById('pay-dous').classList.toggle('active',  mode === 'dous');
+  document.getElementById('bloque-unico').style.display = mode === 'unico' ? 'block' : 'none';
+  document.getElementById('bloque-dous').style.display  = mode === 'dous'  ? 'block' : 'none';
+}
+
+function switchTab(t) {
+  tab = t;
+  document.querySelectorAll('.tab').forEach((el, i) => el.classList.toggle('active', i === (t === 'presuposto' ? 0 : 1)));
+  document.getElementById('page-presuposto').classList.toggle('active', t === 'presuposto');
+  document.getElementById('page-factura').classList.toggle('active',    t === 'factura');
+  document.getElementById('btn-convert').style.display = t === 'presuposto' ? 'flex' : 'none';
+}
+
+function convertirAFactura() {
+  // Collect all data from presuposto form
+  const cnome  = strVal('p-cnome');
+  const cnif   = strVal('p-cnif');
+  const cdir   = strVal('p-cdir');
+  const ccp    = strVal('p-ccp');
+  const ivaPct = document.getElementById('p-iva').value;
+
+  // Build next factura number from presuposto number
+  const pNum = strVal('p-num');
+  const match = pNum.match(/(\d+)/);
+  const nextNum = match ? match[1] + '/26' : '';
+
+  // Switch to factura tab
+  switchTab('factura');
+
+  // Fill client data
+  document.getElementById('f-cnome').value = cnome;
+  document.getElementById('f-cnif').value  = cnif;
+  document.getElementById('f-cdir').value  = cdir;
+  document.getElementById('f-ccp').value   = ccp;
+  document.getElementById('f-num').value   = nextNum;
+  document.getElementById('f-fecha').value = new Date().toISOString().split('T')[0];
+
+  // Set same IVA
+  document.getElementById('f-iva').value = ivaPct;
+
+  // Copy lines — clear existing and recreate
+  const fLineas = document.getElementById('f-lineas');
+  fLineas.innerHTML = '';
+  cnt.f = 0;
+
+  const pLineas = document.getElementById('p-lineas');
+  pLineas.querySelectorAll('.item-row').forEach(row => {
+    const id = row.id.split('-').pop();
+    const ud       = document.getElementById('p-ud-'       + id)?.value || '1';
+    const concepto = document.getElementById('p-concepto-' + id)?.value || '';
+    const precio   = document.getElementById('p-precio-'   + id)?.value || '0';
+    const subtotal = document.getElementById('p-subtotal-' + id)?.value || '0';
+
+    addLinea('f');
+    const nid = cnt.f;
+    document.getElementById('f-ud-'       + nid).value = ud;
+    document.getElementById('f-concepto-' + nid).value = concepto;
+    document.getElementById('f-precio-'   + nid).value = precio;
+    document.getElementById('f-subtotal-' + nid).value = subtotal;
+  });
+
+  calc('f');
+
+  // Scroll to top and show confirmation
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  const st = document.getElementById('status');
+  st.className = 'status ok';
+  st.style.display = 'block';
+  st.textContent = '✓ Datos do orzamento copiados á factura. Revisa o nº de factura e o banco antes de xerar.';
+}
+
+function selectBank(b) {
+  bank = b;
+  document.getElementById('btn-bbva').classList.toggle('active',     b === 'bbva');
+  document.getElementById('btn-sabadell').classList.toggle('active', b === 'sabadell');
+}
+
+function addLinea(px) {
+  const id  = ++cnt[px];
+  const box = document.getElementById(px + '-lineas');
+  const div = document.createElement('div');
+  div.className = 'item-row';
+  div.id = px + '-linea-' + id;
+  div.innerHTML = `
+    <input  type="number" min="0" step="1"    placeholder="1"    id="${px}-ud-${id}"       oninput="calc('${px}')" />
+    <textarea placeholder="Concepto en galego&#10;Concepto en castellano (aparecerá en cursiva)" id="${px}-concepto-${id}"></textarea>
+    <input  type="number" step="0.01"         placeholder="0.00" id="${px}-precio-${id}"   oninput="calcRow('${px}',${id})" />
+    <input  type="number" step="0.01"         placeholder="0.00" id="${px}-subtotal-${id}" oninput="calc('${px}')" />
+    <button class="btn-del" onclick="delLinea('${px}',${id})">×</button>
+  `;
+  box.appendChild(div);
+
+  // Auto-calculate subtotal when price changes
+  document.getElementById(px + '-precio-' + id).addEventListener('input', () => calcRow(px, id));
+  document.getElementById(px + '-ud-'     + id).addEventListener('input', () => calcRow(px, id));
+}
+
+function calcRow(px, id) {
+  const ud  = parseFloat(document.getElementById(px + '-ud-' + id)?.value  || 1);
+  const pri = parseFloat(document.getElementById(px + '-precio-' + id)?.value || 0);
+  const sub = document.getElementById(px + '-subtotal-' + id);
+  if (sub && !isNaN(ud) && !isNaN(pri)) sub.value = (ud * pri).toFixed(2);
+  calc(px);
+}
+
+function delLinea(px, id) {
+  document.getElementById(px + '-linea-' + id)?.remove();
+  calc(px);
+}
+
+function calc(px) {
+  let base = 0;
+  document.getElementById(px + '-lineas').querySelectorAll('.item-row').forEach(row => {
+    const id = row.id.split('-').pop();
+    const v  = parseFloat(document.getElementById(px + '-subtotal-' + id)?.value || 0);
+    if (!isNaN(v)) base += v;
+  });
+  const ivaPct = parseFloat(document.getElementById(px + '-iva').value) / 100;
+  const ivaVal = base * ivaPct;
+  const total  = base + ivaVal;
+  const fmt = n => n.toFixed(2).replace('.', ',') + ' €';
+  document.getElementById(px + '-base').textContent   = fmt(base);
+  document.getElementById(px + '-ivaval').textContent = fmt(ivaVal);
+  document.getElementById(px + '-total').textContent  = fmt(total);
+}
+
+function getLineas(px) {
+  const rows = [];
+  document.getElementById(px + '-lineas').querySelectorAll('.item-row').forEach(row => {
+    const id = row.id.split('-').pop();
+    rows.push({
+      ud:       document.getElementById(px + '-ud-'       + id)?.value || '1',
+      concepto: document.getElementById(px + '-concepto-' + id)?.value || '',
+      precio:   document.getElementById(px + '-precio-'   + id)?.value || '0',
+      subtotal: document.getElementById(px + '-subtotal-' + id)?.value || '0',
+    });
+  });
+  return rows;
+}
+
+function numVal(id) { return parseFloat(document.getElementById(id)?.value || 0).toFixed(2); }
+function strVal(id) { return (document.getElementById(id)?.value || '').trim(); }
+function rawNum(id) { return document.getElementById(id)?.textContent.replace(/\s€/, '').replace(',', '.') || '0'; }
+
+function buildPayload() {
+  const ivaPct = document.getElementById(tab === 'presuposto' ? 'p-iva' : 'f-iva').value;
+  if (tab === 'presuposto') {
+    return {
+      num:     strVal('p-num'),
+      fecha:   strVal('p-fecha'),
+      validez: strVal('p-validez'),
+      cnome:   strVal('p-cnome'),
+      cnif:    strVal('p-cnif'),
+      cdir:    strVal('p-cdir'),
+      ccp:     strVal('p-ccp'),
+      objeto:  strVal('p-objeto'),
+      lineas:  getLineas('p'),
+      ivaPct,
+      base:    rawNum('p-base'),
+      ivaVal:  rawNum('p-ivaval'),
+      total:   rawNum('p-total'),
+      modalidadePago: payMode,
+      pagoUnico: payMode === 'unico' ? numVal('p-pagoUnico') : undefined,
+      pago1:     payMode === 'dous'  ? numVal('p-pago1')     : undefined,
+      pago2:     payMode === 'dous'  ? numVal('p-pago2')     : undefined,
+    };
+  } else {
+    const bankMap = {
+      bbva:     { banco: 'BBVA',     iban: 'ES74 0182 0625 8202 0183 4454' },
+      sabadell: { banco: 'Sabadell', iban: 'ES12 0081 0497 7400 0148 7849' },
+    };
+    return {
+      num:    strVal('f-num'),
+      fecha:  strVal('f-fecha'),
+      cnome:  strVal('f-cnome'),
+      cnif:   strVal('f-cnif'),
+      cdir:   strVal('f-cdir'),
+      ccp:    strVal('f-ccp'),
+      lineas: getLineas('f'),
+      ivaPct,
+      base:   rawNum('f-base'),
+      ivaVal: rawNum('f-ivaval'),
+      total:  rawNum('f-total'),
+      notas:  strVal('f-notas'),
+      ...bankMap[bank],
+    };
+  }
+}
+
+async function generar() {
+  const btn = document.getElementById('btn-gen');
+  const st  = document.getElementById('status');
+  btn.disabled = true;
+  st.className = 'status loading';
+  st.style.display = 'block';
+  st.textContent = 'Xerando documento...';
+
+  try {
+    const payload  = buildPayload();
+    const endpoint = tab === 'presuposto' ? '/api/presuposto' : '/api/factura';
+
+    const resp = await fetch(endpoint, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify(payload),
+    });
+
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({ error: resp.statusText }));
+      throw new Error(err.error || 'Erro no servidor');
+    }
+
+    // Trigger download
+    const blob     = await resp.blob();
+    const url      = URL.createObjectURL(blob);
+    const a        = document.createElement('a');
+    const filename = tab === 'presuposto'
+      ? `Orzamento_${(payload.num || 'draft').replace(/\//g, '-')}.docx`
+      : `Factura_${(payload.num   || 'draft').replace(/\//g, '-')}.docx`;
+    a.href = url; a.download = filename; a.click();
+    URL.revokeObjectURL(url);
+
+    st.className = 'status ok';
+    st.textContent = '✓ Documento descargado: ' + filename;
+  } catch(e) {
+    st.className = 'status err';
+    st.textContent = 'Erro: ' + e.message;
+  }
+  btn.disabled = false;
+}
+
+// Init dates
+const today = new Date().toISOString().split('T')[0];
+document.getElementById('p-fecha').value = today;
+document.getElementById('f-fecha').value = today;
+const in3m = new Date(); in3m.setMonth(in3m.getMonth() + 3);
+document.getElementById('p-validez').value = in3m.toISOString().split('T')[0];
+
+addLinea('p');
+addLinea('f');
+
+// Show convert button since we start on presuposto
+document.getElementById('btn-convert').style.display = 'flex';
+</script>
+</body>
+</html>
