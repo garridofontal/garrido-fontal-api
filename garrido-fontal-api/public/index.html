@@ -301,6 +301,11 @@
       </div>
     </div>
 
+    <div class="section">
+      <div class="section-title">Notas (opcional)</div>
+      <textarea id="p-notas" placeholder="Ex: Non se inclúen remates interiores nin pintura. Os prezos inclúen man de obra e materiais VELUX..."></textarea>
+    </div>
+
   </div>
 
   <!-- ══════════════════ FACTURA ══════════════════ -->
@@ -668,6 +673,7 @@ function buildPayload() {
       pagoUnico: payMode === 'unico' ? numVal('p-pagoUnico') : undefined,
       pago1:     payMode === 'dous'  ? numVal('p-pago1')     : undefined,
       pago2:     payMode === 'dous'  ? numVal('p-pago2')     : undefined,
+      notas:     strVal('p-notas'),
     };
   } else {
     const bankMap = {
