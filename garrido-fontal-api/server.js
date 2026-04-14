@@ -1,24 +1,64 @@
 const express = require('express');
-const cors    = require('cors');
-const path    = require('path');
-const multer  = require('multer');
+const cors = require('cors');
+const path = require('path');
+const multer = require('multer');
 const { Packer } = require('docx');
-const { buildPresuposto }   = require('./builders/presuposto');
-const { buildFactura }      = require('./builders/factura');
-const { readPresuposto }    = require('./builders/readPresuposto');
+const { buildPresuposto } = require('./builders/presuposto');
+const { buildFactura } = require('./builders/factura');
+const { readPresuposto } = require('./builders/readPresuposto');
 
-const app    = express();
-const PORT   = process.env.PORT || 3000;
+const app = express();
+const PORT = process.env.PORT || 3000;
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
 app.use(cors());
 app.use(express.json({ limit: '2mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
-// ── Health check ─────────────────────────────────────────────────────────────
+// ── Health check ────────────────────────────────────────────────────────────────
 app.get('/health', (_req, res) => res.json({ ok: true }));
 
-// ── Ler presuposto (extract data from uploaded .docx) ─────────────────────────
+// ── Traducir gallego → castellano ───────────────────────────────────────────────
+app.post('/api/traducir', async (req, res) => {
+  try {
+    const { texto } = req.body;
+    if (!texto || !texto.trim()) return res.json({ traduccion: '' });
+
+    const apiKey = process.env.ANTHROPIC_API_KEY;
+    if (!apiKey) return res.status(500).json({ error: 'ANTHROPIC_API_KEY non configurada' });
+
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 512,
+        messages: [{
+          role: 'user',
+          content: `Traduce este texto do galego ó castelán. Devolve UNICAMENTE a tradución, sen explicacións, sen comillas, sen prefixos.\n\nTexto:\n${texto}`,
+        }],
+      }),
+    });
+
+    if (!response.ok) {
+      const err = await response.text();
+      return res.status(500).json({ error: 'API error: ' + err });
+    }
+
+    const data = await response.json();
+    const traduccion = (data.content?.[0]?.text || '').trim();
+    res.json({ traduccion });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ── Ler presuposto (extract data from uploaded .docx) ───────────────────────────
 app.post('/api/ler-presuposto', upload.single('file'), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: 'No se recibiu ningún arquivo' });
@@ -33,7 +73,7 @@ app.post('/api/ler-presuposto', upload.single('file'), async (req, res) => {
   }
 });
 
-// ── Generar presupuesto ───────────────────────────────────────────────────────
+// ── Generar presupuesto ─────────────────────────────────────────────────────────
 app.post('/api/presuposto', async (req, res) => {
   try {
     const doc = buildPresuposto(req.body);
@@ -48,7 +88,7 @@ app.post('/api/presuposto', async (req, res) => {
   }
 });
 
-// ── Generar factura ───────────────────────────────────────────────────────────
+// ── Generar factura ─────────────────────────────────────────────────────────────
 app.post('/api/factura', async (req, res) => {
   try {
     const doc = buildFactura(req.body);
