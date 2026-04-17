@@ -165,7 +165,11 @@
         </div>
         <div class="pay-btn" id="pay-dous" onclick="setPayMode('dous')">
           <strong>Dous pagos / Dos pagos</strong>
-          <span>1ª factura provisión · 2ª man de obra</span>
+          <span>1ª provisión · 2ª man de obra</span>
+        </div>
+        <div class="pay-btn" id="pay-tres" onclick="setPayMode('tres')">
+          <strong>Tres pagos</strong>
+          <span>Provisión · inicio · final</span>
         </div>
       </div>
       <div id="bloque-unico" style="margin-top:10px;">
@@ -183,6 +187,22 @@
           <div class="field">
             <label>2ª Factura — Man de obra ao finalizar (€)</label>
             <input id="p-pago2" type="number" step="0.01" placeholder="0.00" />
+          </div>
+        </div>
+      </div>
+      <div id="bloque-tres" style="margin-top:10px; display:none;">
+        <div class="grid3">
+          <div class="field">
+            <label>1ª — Provisión de materiais (€)</label>
+            <input id="p-pago1-t" type="number" step="0.01" placeholder="0.00" />
+          </div>
+          <div class="field">
+            <label>2ª — Inicio da obra (€)</label>
+            <input id="p-pago2-t" type="number" step="0.01" placeholder="0.00" />
+          </div>
+          <div class="field">
+            <label>3ª — Man de obra final (€)</label>
+            <input id="p-pago3-t" type="number" step="0.01" placeholder="0.00" />
           </div>
         </div>
       </div>
@@ -301,8 +321,10 @@ function setPayMode(mode) {
   payMode = mode;
   document.getElementById('pay-unico').classList.toggle('active', mode === 'unico');
   document.getElementById('pay-dous').classList.toggle('active', mode === 'dous');
+  document.getElementById('pay-tres').classList.toggle('active', mode === 'tres');
   document.getElementById('bloque-unico').style.display = mode === 'unico' ? 'block' : 'none';
-  document.getElementById('bloque-dous').style.display = mode === 'dous' ? 'block' : 'none';
+  document.getElementById('bloque-dous').style.display  = mode === 'dous'  ? 'block' : 'none';
+  document.getElementById('bloque-tres').style.display  = mode === 'tres'  ? 'block' : 'none';
 }
 
 function switchTab(t) {
@@ -507,8 +529,9 @@ function buildPayload() {
       base: rawNum('p-base'), ivaVal: rawNum('p-ivaval'), total: rawNum('p-total'),
       modalidadePago: payMode,
       pagoUnico: payMode === 'unico' ? numVal('p-pagoUnico') : undefined,
-      pago1: payMode === 'dous' ? numVal('p-pago1') : undefined,
-      pago2: payMode === 'dous' ? numVal('p-pago2') : undefined,
+      pago1: payMode === 'dous' ? numVal('p-pago1') : (payMode === 'tres' ? numVal('p-pago1-t') : undefined),
+      pago2: payMode === 'dous' ? numVal('p-pago2') : (payMode === 'tres' ? numVal('p-pago2-t') : undefined),
+      pago3: payMode === 'tres' ? numVal('p-pago3-t') : undefined,
       notas: strVal('p-notas'),
     };
   } else {
