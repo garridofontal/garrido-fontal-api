@@ -130,6 +130,19 @@ function buildPresuposto(d) {
   });
 
   // ── Payment ───────────────────────────────────────────────────────────────────
+  const buildPayCell = (width, titleGl, titleEs, importe, legendGl, legendEs) => new TableCell({
+    borders: thinBorder(C.DARK),
+    shading: { fill: C.LIGHT_BG, type: ShadingType.CLEAR },
+    margins: { top: 100, bottom: 100, left: 200, right: 200 },
+    width: { size: width, type: WidthType.DXA },
+    children: [
+      para(titleGl, { bold: true, color: C.DARK, size: 18 }),
+      para(titleEs, { size: 16, color: C.GRAY_TEXT, italic: true }),
+      para(importe, { bold: true, size: 20, color: C.DARK }),
+      para(`(${legendGl} / ${legendEs})`, { size: 15, italic: true, color: C.GRAY_TEXT }),
+    ],
+  });
+
   let payTable;
   if (d.modalidadePago === 'unico') {
     const totalPago = d.pagoUnico ? d.pagoUnico + ' €' : d.total || '—';
@@ -151,6 +164,22 @@ function buildPresuposto(d) {
         }),
       ]})],
     });
+  } else if (d.modalidadePago === 'tres') {
+    const pago1 = d.pago1 ? d.pago1 + ' €' : '—';
+    const pago2 = d.pago2 ? d.pago2 + ' €' : '—';
+    const pago3 = d.pago3 ? d.pago3 + ' €' : '—';
+    payTable = new Table({
+      width: { size: 9326, type: WidthType.DXA },
+      columnWidths: [3109, 3109, 3108],
+      rows: [new TableRow({ children: [
+        buildPayCell(3109, '1ª Factura — Provisión de materiais', '1ª Factura — Provisión de materiales', pago1,
+          'ó confirmar o pedido', 'al confirmar el pedido'),
+        buildPayCell(3109, '2ª Factura — Inicio da obra', '2ª Factura — Inicio de la obra', pago2,
+          'ó comezar a instalación', 'al comenzar la instalación'),
+        buildPayCell(3108, '3ª Factura — Man de obra final', '3ª Factura — Mano de obra final', pago3,
+          'ó rematar a instalación', 'al terminar la instalación'),
+      ]})],
+    });
   } else {
     const pago1 = d.pago1 ? d.pago1 + ' €' : '—';
     const pago2 = d.pago2 ? d.pago2 + ' €' : '—';
@@ -158,30 +187,10 @@ function buildPresuposto(d) {
       width: { size: 9326, type: WidthType.DXA },
       columnWidths: [4663, 4663],
       rows: [new TableRow({ children: [
-        new TableCell({
-          borders: thinBorder(C.DARK),
-          shading: { fill: C.LIGHT_BG, type: ShadingType.CLEAR },
-          margins: { top: 100, bottom: 100, left: 200, right: 200 },
-          width: { size: 4663, type: WidthType.DXA },
-          children: [
-            para('1ª Factura — Provisión de materiais', { bold: true, color: C.DARK, size: 18 }),
-            para('1ª Factura — Provisión de materiales', { size: 16, color: C.GRAY_TEXT, italic: true }),
-            para(pago1, { bold: true, size: 20, color: C.DARK }),
-            para('(ó confirmar o pedido / al confirmar el pedido)', { size: 15, italic: true, color: C.GRAY_TEXT }),
-          ],
-        }),
-        new TableCell({
-          borders: thinBorder(C.DARK),
-          shading: { fill: C.LIGHT_BG, type: ShadingType.CLEAR },
-          margins: { top: 100, bottom: 100, left: 200, right: 200 },
-          width: { size: 4663, type: WidthType.DXA },
-          children: [
-            para('2ª Factura — Man de obra', { bold: true, color: C.DARK, size: 18 }),
-            para('2ª Factura — Mano de obra', { size: 16, color: C.GRAY_TEXT, italic: true }),
-            para(pago2, { bold: true, size: 20, color: C.DARK }),
-            para('(ó rematar a instalación / al terminar la instalación)', { size: 15, italic: true, color: C.GRAY_TEXT }),
-          ],
-        }),
+        buildPayCell(4663, '1ª Factura — Provisión de materiais', '1ª Factura — Provisión de materiales', pago1,
+          'ó confirmar o pedido', 'al confirmar el pedido'),
+        buildPayCell(4663, '2ª Factura — Man de obra', '2ª Factura — Mano de obra', pago2,
+          'ó rematar a instalación', 'al terminar la instalación'),
       ]})],
     });
   }
