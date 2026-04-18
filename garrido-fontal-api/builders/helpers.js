@@ -20,9 +20,21 @@ const LOGO = fs.readFileSync(path.join(__dirname, '..', 'logo.png'));
 // ── Number formatting (ES: 1.234,56) ──────────────────────────────────────────
 function formatNum(val) {
   if (val === null || val === undefined || val === '') return '0,00';
-  const n = parseFloat(String(val).replace(/\./g, '').replace(',', '.'));
+  let s = String(val).trim();
+  // Si viene en formato ES (con coma): quitar puntos de miles y cambiar coma a punto
+  // Si viene en formato JS (solo punto decimal): dejar tal cual
+  if (s.includes(',')) {
+    s = s.replace(/\./g, '').replace(',', '.');
+  }
+  const n = parseFloat(s);
   if (isNaN(n)) return '0,00';
-  return n.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  // Formateo manual ES: puntos para miles, coma para decimales
+  const fixed = n.toFixed(2);
+  const [intPart, decPart] = fixed.split('.');
+  const sign = intPart.startsWith('-') ? '-' : '';
+  const absInt = sign ? intPart.slice(1) : intPart;
+  const withThousands = absInt.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  return sign + withThousands + ',' + decPart;
 }
 function formatCurrency(val) {
   return formatNum(val) + ' €';
