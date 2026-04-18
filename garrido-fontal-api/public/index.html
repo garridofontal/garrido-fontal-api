@@ -416,9 +416,12 @@ function fillFacturaFromPresuposto(d) {
     addLinea('f');
     const id = cnt.f;
     document.getElementById('f-ud-' + id).value = l.ud || '1';
-    // For factura, concepto is plain text (no translation needed)
+    // Separar concepto en GL (1ª línea) y ES (resto) si viene con salto de línea
+    const partes = String(l.concepto || '').split('\n');
     const glEl = document.getElementById('f-gl-' + id);
-    if (glEl) glEl.value = l.concepto || '';
+    const esEl = document.getElementById('f-es-' + id);
+    if (glEl) glEl.value = partes[0] || '';
+    if (esEl) esEl.value = partes.slice(1).join('\n') || '';
     document.getElementById('f-precio-' + id).value = l.precio || '0';
     document.getElementById('f-subtotal-' + id).value = l.subtotal || '0';
   });
@@ -440,15 +443,12 @@ function addLinea(px) {
   div.className = 'item-row';
   div.id = px + '-linea-' + id;
 
-  // For presuposto: two textareas (gallego + castellano editable) + translate button
-  // For factura: single textarea
-  const conceptoHTML = px === 'p'
-    ? `<div class="concepto-wrap">
-        <textarea class="concepto-gl" placeholder="Concepto en galego (1ª liña)" id="${px}-gl-${id}"></textarea>
-        <button class="btn-traducir" id="${px}-btn-tr-${id}" type="button" onclick="traducirConcepto('${px}',${id})">↓ Traducir</button>
-        <textarea class="concepto-es" placeholder="Tradución en castellano (editable)" id="${px}-es-${id}"></textarea>
-       </div>`
-    : `<textarea placeholder="Concepto" id="${px}-gl-${id}" style="min-height:48px;font-size:13px;line-height:1.45;"></textarea>`;
+  // Misma estructura para presupuesto y factura: GL + botón traducir + ES
+  const conceptoHTML = `<div class="concepto-wrap">
+    <textarea class="concepto-gl" placeholder="Concepto en galego (1ª liña)" id="${px}-gl-${id}"></textarea>
+    <button class="btn-traducir" id="${px}-btn-tr-${id}" type="button" onclick="traducirConcepto('${px}',${id})">↓ Traducir</button>
+    <textarea class="concepto-es" placeholder="Tradución en castellano (editable)" id="${px}-es-${id}"></textarea>
+   </div>`;
 
   div.innerHTML = `
     <input type="number" min="0" step="1" placeholder="1" id="${px}-ud-${id}" oninput="calc('${px}')" />
@@ -497,7 +497,7 @@ function getLineas(px) {
     const esVal = document.getElementById(px + '-es-' + id)?.value || '';
     // Combine: first line gallego, second line castellano (if present and different)
     let concepto = glVal;
-    if (px === 'p' && esVal && esVal.trim() && esVal.trim() !== glVal.trim()) {
+    if (esVal && esVal.trim() && esVal.trim() !== glVal.trim()) {
       concepto = glVal + '\n' + esVal;
     }
     rows.push({
