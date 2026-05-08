@@ -121,14 +121,14 @@
       <div class="grid2">
         <div class="field full"><label>Nombre</label><input id="p-cnome" placeholder="Comunidade de Propietarios..." /></div>
         <div class="field"><label>NIF/CIF</label><input id="p-cnif" placeholder="H-27XXXXXX" /></div>
-        <div class="field"><label>Enderezo / Dirección</label><input id="p-cdir" placeholder="RÃºa..." /></div>
+        <div class="field"><label>Enderezo / Dirección</label><input id="p-cdir" placeholder="Rúa..." /></div>
         <div class="field"><label>C.P. / Localidad</label><input id="p-ccp" placeholder="27002 Lugo" /></div>
       </div>
     </div>
 
     <div class="section">
       <div class="section-title">Objeto</div>
-      <input id="p-objeto" placeholder="Cambio de ventÃ¡s de tellado / Sustitución de ventanas de tejado..." />
+      <input id="p-objeto" placeholder="Cambio de ventanas de tejado / Sustitución de ventanas de tejado..." />
     </div>
 
     <div class="section">
@@ -150,7 +150,7 @@
             <option value="21" selected>21 %</option>
           </select>
         </div>
-        <div class="total-row"><span class="lbl">Base impoÃ±ible</span><span class="val" id="p-base">0,00 â¬</span></div>
+        <div class="total-row"><span class="lbl">Base imponible</span><span class="val" id="p-base">0,00 â¬</span></div>
         <div class="total-row"><span class="lbl">IVA</span><span class="val" id="p-ivaval">0,00 â¬</span></div>
         <div class="total-row"><span class="lbl">TOTAL</span><span class="val total-big" id="p-total">0,00 â¬</span></div>
       </div>
@@ -161,11 +161,11 @@
       <div class="pay-mode">
         <div class="pay-btn active" id="pay-unico" onclick="setPayMode('unico')">
           <strong>Pago Ãºnico</strong>
-          <span>AbÃ³nase todo ao finalizar</span>
+          <span>Abonas todo al finalizar</span>
         </div>
         <div class="pay-btn" id="pay-dous" onclick="setPayMode('dous')">
           <strong>Dos pagos</strong>
-          <span>1Âª provisiÃ³n Â· 2Âª man de obra</span>
+          <span>1ª provisión · 2ª mano de obra</span>
         </div>
         <div class="pay-btn" id="pay-tres" onclick="setPayMode('tres')">
           <strong>Tres pagos</strong>
@@ -175,7 +175,7 @@
       <div id="bloque-unico" style="margin-top:10px;">
         <div class="field">
           <label>Importe total (â¬ â podes deixalo baleiro e usarase o total calculado)</label>
-          <input id="p-pagoUnico" type="number" step="0.01" placeholder="DÃ©ixalo baleiro para usar o total automÃ¡tico" />
+          <input id="p-pagoUnico" type="number" step="0.01" placeholder="Déjalo vacío para usar el total automático" />
         </div>
       </div>
       <div id="bloque-dous" style="margin-top:10px; display:none;">
@@ -210,7 +210,7 @@
 
     <div class="section">
       <div class="section-title">Notas (opcional)</div>
-      <textarea id="p-notas" placeholder="Ex: Non se inclÃºen remates interiores nin pintura. Os prezos inclÃºen man de obra e materiais VELUX..."></textarea>
+      <textarea id="p-notas" placeholder="Ex: Non se inclÃºen remates interiores nin pintura. Os prezos inclÃºen mano de obra e materiais VELUX..."></textarea>
     </div>
   </div>
 
@@ -253,7 +253,7 @@
             <option value="21" selected>21 %</option>
           </select>
         </div>
-        <div class="total-row"><span class="lbl">Base impoÃ±ible</span><span class="val" id="f-base">0,00 â¬</span></div>
+        <div class="total-row"><span class="lbl">Base imponible</span><span class="val" id="f-base">0,00 â¬</span></div>
         <div class="total-row"><span class="lbl">IVA</span><span class="val" id="f-ivaval">0,00 â¬</span></div>
         <div class="total-row"><span class="lbl">TOTAL</span><span class="val total-big" id="f-total">0,00 â¬</span></div>
       </div>
@@ -273,7 +273,7 @@
 
     <div class="section">
       <div class="section-title">Notas (opcional)</div>
-      <textarea id="f-notas" placeholder="Ex: Factura de provisiÃ³n de materiais. Pendente segunda factura de man de obra ao finalizar..."></textarea>
+      <textarea id="f-notas" placeholder="Ex: Factura de provisiÃ³n de materiais. Pendente segunda factura de mano de obra ao finalizar..."></textarea>
     </div>
   </div>
 
@@ -445,7 +445,7 @@ function addLinea(px) {
 
   // Misma estructura para presupuesto y factura: GL + botÃ³n traducir + ES
   const conceptoHTML = `<div class="concepto-wrap">
-    <textarea class="concepto-gl" placeholder="Concepto en galego (1Âª liÃ±a)" id="${px}-gl-${id}"></textarea>
+    <textarea class="concepto-gl" placeholder="Concepto (descripción liÃ±a)" id="${px}-gl-${id}"></textarea>
     <button class="btn-traducir" id="${px}-btn-tr-${id}" type="button" onclick="traducirConcepto('${px}',${id})">â Traducir</button>
     <textarea class="concepto-es" placeholder="TraduciÃ³n en castellano (editable)" id="${px}-es-${id}"></textarea>
    </div>`;
