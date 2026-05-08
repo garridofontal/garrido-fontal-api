@@ -8,11 +8,11 @@ const {
   labelCell, valueCell,
   buildHeader, buildSeparator, buildFooter, buildTotals,
   headerItemCell, conceptCell, numCell, buildMetaTable,
-  formatCurrency,
+  formatCurrency, formatDate,
 } = require('./helpers');
 
 function buildPresuposto(d) {
-  // ── Title bar ──────────────────────────────────────────────────────────────
+  // ââ Title bar ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
   const titleTable = new Table({
     width: { size: 9326, type: WidthType.DXA },
     columnWidths: [6326, 1500, 1500],
@@ -23,7 +23,7 @@ function buildPresuposto(d) {
         margins: { top: 150, bottom: 150, left: 300, right: 300 },
         children: [new Paragraph({
           alignment: AlignmentType.LEFT, spacing: { before: 0, after: 0 },
-          children: [new TextRun({ text: 'ORZAMENTO / PRESUPUESTO', font: 'Arial', size: 28, bold: true, color: C.WHITE })],
+          children: [new TextRun({ text: 'PRESUPUESTO', font: 'Arial', size: 28, bold: true, color: C.WHITE })],
         })],
       }),
       new TableCell({
@@ -31,8 +31,8 @@ function buildPresuposto(d) {
         shading: { fill: C.DARK, type: ShadingType.CLEAR },
         margins: { top: 150, bottom: 150, left: 150, right: 150 },
         children: [
-          para('Nº Orzamento:', { size: 16, bold: true, color: C.GRAY_LINE }),
-          para(d.num || '—',    { size: 22, bold: true, color: C.WHITE, align: AlignmentType.CENTER }),
+          para('NÂº Orzamento:', { size: 16, bold: true, color: C.GRAY_LINE }),
+          para(d.num || 'â',    { size: 22, bold: true, color: C.WHITE, align: AlignmentType.CENTER }),
         ],
       }),
       new TableCell({
@@ -40,34 +40,34 @@ function buildPresuposto(d) {
         shading: { fill: C.DARK, type: ShadingType.CLEAR },
         margins: { top: 150, bottom: 150, left: 150, right: 150 },
         children: [
-          para('Data / Fecha:', { size: 16, bold: true, color: C.GRAY_LINE }),
-          para(d.fecha || '—',  { size: 20, bold: true, color: C.WHITE }),
+          para('Fecha:', { size: 16, bold: true, color: C.GRAY_LINE }),
+          para(formatDate(d.fecha) || 'â',  { size: 20, bold: true, color: C.WHITE }),
         ],
       }),
     ]})],
   });
 
-  // ── Meta table ─────────────────────────────────────────────────────────────
+  // ââ Meta table âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
   const metaTable = buildMetaTable([
-    [labelCell('Cliente:', 1500), valueCell(d.cnome || '—', 4326, { bold: true }),
-     labelCell('NIF/CIF:', 1500), valueCell(d.cnif || '—', 2000)],
-    [labelCell('Enderezo:', 1500), valueCell(d.cdir || '—', 4326),
-     labelCell('C.P.:', 1500), valueCell(d.ccp || '—', 2000)],
-    [labelCell('Válido ata:', 1500), valueCell(d.validez || '—', 4326),
+    [labelCell('Cliente:', 1500), valueCell(d.cnome || 'â', 4326, { bold: true }),
+     labelCell('NIF/CIF:', 1500), valueCell(d.cnif || 'â', 2000)],
+    [labelCell('Dirección:', 1500), valueCell(d.cdir || 'â', 4326),
+     labelCell('C.P.:', 1500), valueCell(d.ccp || 'â', 2000)],
+    [labelCell('VÃ¡lido ata:', 1500), valueCell(formatDate(d.validez) || 'â', 4326),
      new TableCell({ borders: noBorder(), width: { size: 3500, type: WidthType.DXA }, columnSpan: 2,
        margins: { top: 80, bottom: 80, left: 0, right: 0 }, children: [para('')] })],
   ]);
 
-  // ── Object description ─────────────────────────────────────────────────────
+  // ââ Object description âââââââââââââââââââââââââââââââââââââââââââââââââââââ
   const objPara = new Paragraph({
     spacing: { before: 240, after: 160 },
     children: [
-      new TextRun({ text: 'Obxecto / Objeto: ', font: 'Arial', size: 20, bold: true, color: C.DARK }),
-      new TextRun({ text: d.objeto || '—', font: 'Arial', size: 20, color: '222222' }),
+      new TextRun({ text: 'Objeto: ', font: 'Arial', size: 20, bold: true, color: C.DARK }),
+      new TextRun({ text: d.objeto || 'â', font: 'Arial', size: 20, color: '222222' }),
     ],
   });
 
-  // ── Items table ────────────────────────────────────────────────────────────
+  // ââ Items table ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
   const COLS = [600, 5726, 1500, 1500];
   const itemRows = (d.lineas || []).map((l, i) => {
     const isAlt = i % 2 !== 0;
@@ -79,8 +79,8 @@ function buildPresuposto(d) {
     return new TableRow({ children: [
       numCell(l.ud || '1', COLS[0], isAlt),
       conceptCell(conceptLines, COLS[1], isAlt),
-      numCell(l.precio ? formatCurrency(l.precio) : '—', COLS[2], isAlt, AlignmentType.RIGHT),
-      numCell(l.subtotal ? formatCurrency(l.subtotal) : '—', COLS[3], isAlt, AlignmentType.RIGHT),
+      numCell(l.precio ? formatCurrency(l.precio) : 'â', COLS[2], isAlt, AlignmentType.RIGHT),
+      numCell(l.subtotal ? formatCurrency(l.subtotal) : 'â', COLS[3], isAlt, AlignmentType.RIGHT),
     ]});
   });
 
@@ -90,15 +90,15 @@ function buildPresuposto(d) {
     rows: [
       new TableRow({ children: [
         headerItemCell('Ud.', COLS[0]),
-        headerItemCell('Concepto / Descripción', COLS[1], AlignmentType.LEFT),
-        headerItemCell('Prezo Ud.\nPrecio Ud.', COLS[2]),
+        headerItemCell('Concepto / DescripciÃ³n', COLS[1], AlignmentType.LEFT),
+        headerItemCell('Precio Ud.', COLS[2]),
         headerItemCell('Total\ns/IVA', COLS[3]),
       ]}),
       ...itemRows,
     ],
   });
 
-  // ── Notes ──────────────────────────────────────────────────────────────────
+  // ââ Notes ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
   const notesTable = new Table({
     width: { size: 9326, type: WidthType.DXA }, columnWidths: [9326],
     rows: [new TableRow({ children: [new TableCell({
@@ -106,14 +106,14 @@ function buildPresuposto(d) {
       shading: { fill: C.LIGHT_BG, type: ShadingType.CLEAR },
       margins: { top: 120, bottom: 120, left: 200, right: 200 },
       children: [
-        para('Notas / Notas:', { size: 18, bold: true, color: C.DARK }),
-        para('• Non se inclúen remates interiores nin pintura / No se incluyen remates interiores ni pintura.', { size: 17, color: C.GRAY_TEXT }),
-        para('• Os prezos inclúen man de obra e materiais VELUX / Los precios incluyen mano de obra y materiales VELUX.', { size: 17, color: C.GRAY_TEXT }),
+        para('Notas:', { size: 18, bold: true, color: C.DARK }),
+        para('â¢ Non se inclÃºen remates interiores nin pintura / No se incluyen remates interiores ni pintura.', { size: 17, color: C.GRAY_TEXT }),
+        para('â¢ Os prezos inclÃºen man de obra e materiais VELUX / Los precios incluyen mano de obra y materiales VELUX.', { size: 17, color: C.GRAY_TEXT }),
       ],
     })]})],
   });
 
-  // ── Payment ────────────────────────────────────────────────────────────────
+  // ââ Payment ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
   // d.modalidadePago: 'unico' | 'dous' | 'tres'
   const buildPayCell = (width, titleGl, titleEs, importe, legendGl, legendEs) => new TableCell({
     borders: thinBorder(C.DARK),
@@ -138,51 +138,51 @@ function buildPresuposto(d) {
           borders: thinBorder(C.DARK), shading: { fill: C.LIGHT_BG, type: ShadingType.CLEAR },
           margins: { top: 110, bottom: 110, left: 250, right: 250 }, width: { size: 9326, type: WidthType.DXA },
           children: [
-            para('Pago único ao finalizar / Pago único al finalizar', { bold: true, color: C.DARK, size: 19 }),
-            para('Abonarase o importe total unha vez rematada a instalación.', { size: 16, color: C.GRAY_TEXT }),
-            para('Se abonará el importe total una vez terminada la instalación.', { size: 16, color: C.GRAY_TEXT, italic: true }),
+            para('Pago Ãºnico ao finalizar / Pago Ãºnico al finalizar', { bold: true, color: C.DARK, size: 19 }),
+            para('Abonarase o importe total unha vez rematada a instalaciÃ³n.', { size: 16, color: C.GRAY_TEXT }),
+            para('Se abonarÃ¡ el importe total una vez terminada la instalaciÃ³n.', { size: 16, color: C.GRAY_TEXT, italic: true }),
             para(totalPago, { bold: true, size: 22, color: C.DARK }),
           ],
         }),
       ]})],
     });
   } else if (d.modalidadePago === 'tres') {
-    const pago1 = d.pago1 ? formatCurrency(d.pago1) : '—';
-    const pago2 = d.pago2 ? formatCurrency(d.pago2) : '—';
-    const pago3 = d.pago3 ? formatCurrency(d.pago3) : '—';
+    const pago1 = d.pago1 ? formatCurrency(d.pago1) : 'â';
+    const pago2 = d.pago2 ? formatCurrency(d.pago2) : 'â';
+    const pago3 = d.pago3 ? formatCurrency(d.pago3) : 'â';
     payTable = new Table({
       width: { size: 9326, type: WidthType.DXA }, columnWidths: [3109, 3109, 3108],
       rows: [new TableRow({ children: [
-        buildPayCell(3109, '1ª — Provisión de materiais', '1ª — Provisión de materiales', pago1,
-          'ó confirmar o pedido', 'al confirmar el pedido'),
-        buildPayCell(3109, '2ª — Inicio da obra', '2ª — Inicio de la obra', pago2,
-          'ó comezar a instalación', 'al comenzar la instalación'),
-        buildPayCell(3108, '3ª — Man de obra final', '3ª — Mano de obra final', pago3,
-          'ó rematar a instalación', 'al terminar la instalación'),
+        buildPayCell(3109, '1Âª â ProvisiÃ³n de materiais', '1Âª â ProvisiÃ³n de materiales', pago1,
+          'Ã³ confirmar o pedido', 'al confirmar el pedido'),
+        buildPayCell(3109, '2Âª â Inicio da obra', '2Âª â Inicio de la obra', pago2,
+          'Ã³ comezar a instalaciÃ³n', 'al comenzar la instalaciÃ³n'),
+        buildPayCell(3108, '3Âª â Man de obra final', '3Âª â Mano de obra final', pago3,
+          'Ã³ rematar a instalaciÃ³n', 'al terminar la instalaciÃ³n'),
       ]})],
     });
   } else {
-    const pago1 = d.pago1 ? formatCurrency(d.pago1) : '—';
-    const pago2 = d.pago2 ? formatCurrency(d.pago2) : '—';
+    const pago1 = d.pago1 ? formatCurrency(d.pago1) : 'â';
+    const pago2 = d.pago2 ? formatCurrency(d.pago2) : 'â';
     payTable = new Table({
       width: { size: 9326, type: WidthType.DXA }, columnWidths: [4663, 4663],
       rows: [new TableRow({ children: [
-        buildPayCell(4663, '1ª Factura — Provisión de materiais', '1ª Factura — Provisión de materiales', pago1,
-          'ó confirmar o pedido', 'al confirmar el pedido'),
-        buildPayCell(4663, '2ª Factura — Man de obra', '2ª Factura — Mano de obra', pago2,
-          'ó rematar a instalación', 'al terminar la instalación'),
+        buildPayCell(4663, '1Âª Factura â ProvisiÃ³n de materiais', '1Âª Factura â ProvisiÃ³n de materiales', pago1,
+          'Ã³ confirmar o pedido', 'al confirmar el pedido'),
+        buildPayCell(4663, '2Âª Factura â Man de obra', '2Âª Factura â Mano de obra', pago2,
+          'Ã³ rematar a instalaciÃ³n', 'al terminar la instalaciÃ³n'),
       ]})],
     });
   }
 
-  // ── Signature ──────────────────────────────────────────────────────────────
+  // ââ Signature ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
   const sigTable = new Table({
     width: { size: 9326, type: WidthType.DXA }, columnWidths: [4663, 4663],
     rows: [new TableRow({ children: [
       new TableCell({
         borders: thinBorder(C.GRAY_LINE), margins: { top: 150, bottom: 280, left: 200, right: 200 }, width: { size: 4663, type: WidthType.DXA },
         children: [
-          para('Conforme o cliente / Conforme el cliente:', { size: 17, bold: true, color: C.DARK }),
+          para('Conforme el cliente:', { size: 17, bold: true, color: C.DARK }),
           emptyPara(140),
           para('Sinatura / Firma: ____________________________', { size: 16, color: C.GRAY_TEXT }),
           emptyPara(50),
@@ -213,7 +213,7 @@ function buildPresuposto(d) {
         emptyPara(60), notesTable,
         emptyPara(80), buildTotals(d.base, d.ivaPct, d.ivaVal, d.total),
         emptyPara(120),
-        para('Forma de pago / Forma de pago:', { size: 19, bold: true, color: C.DARK }),
+        para('Forma de pago:', { size: 19, bold: true, color: C.DARK }),
         emptyPara(60), payTable,
         emptyPara(140), sigTable,
       ],
