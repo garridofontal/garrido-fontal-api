@@ -8,11 +8,11 @@ const {
   labelCell, valueCell,
   buildHeader, buildSeparator, buildFooter, buildTotals,
   headerItemCell, conceptCell, numCell, buildMetaTable,
-  formatCurrency,
+  formatCurrency, formatDate,
 } = require('./helpers');
 
 function buildFactura(d) {
-  // ── Title bar ──────────────────────────────────────────────────────────────
+  // ââ Title bar ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
   const titleTable = new Table({
     width: { size: 9326, type: WidthType.DXA },
     columnWidths: [6326, 1500, 1500],
@@ -31,8 +31,8 @@ function buildFactura(d) {
         shading: { fill: C.DARK, type: ShadingType.CLEAR },
         margins: { top: 150, bottom: 150, left: 150, right: 150 },
         children: [
-          para('Nº Factura:', { size: 16, bold: true, color: C.GRAY_LINE }),
-          para(d.num || '—', { size: 22, bold: true, color: C.WHITE, align: AlignmentType.CENTER }),
+          para('NÂº Factura:', { size: 16, bold: true, color: C.GRAY_LINE }),
+          para(d.num || 'â', { size: 22, bold: true, color: C.WHITE, align: AlignmentType.CENTER }),
         ],
       }),
       new TableCell({
@@ -40,22 +40,22 @@ function buildFactura(d) {
         shading: { fill: C.DARK, type: ShadingType.CLEAR },
         margins: { top: 150, bottom: 150, left: 150, right: 150 },
         children: [
-          para('Data / Fecha:', { size: 16, bold: true, color: C.GRAY_LINE }),
-          para(d.fecha || '—', { size: 20, bold: true, color: C.WHITE }),
+          para('Fecha:', { size: 16, bold: true, color: C.GRAY_LINE }),
+          para(formatDate(d.fecha) || 'â', { size: 20, bold: true, color: C.WHITE }),
         ],
       }),
     ]})],
   });
 
-  // ── Meta table ─────────────────────────────────────────────────────────────
+  // ââ Meta table âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
   const metaTable = buildMetaTable([
-    [labelCell('Cliente:', 1500), valueCell(d.cnome || '—', 4326, { bold: true }),
-     labelCell('NIF/CIF:', 1500), valueCell(d.cnif || '—', 2000)],
-    [labelCell('Enderezo:', 1500), valueCell(d.cdir || '—', 4326),
-     labelCell('C.P. / Localidade:', 1500), valueCell(d.ccp || '—', 2000)],
+    [labelCell('Cliente:', 1500), valueCell(d.cnome || 'â', 4326, { bold: true }),
+     labelCell('NIF/CIF:', 1500), valueCell(d.cnif || 'â', 2000)],
+    [labelCell('Enderezo:', 1500), valueCell(d.cdir || 'â', 4326),
+     labelCell('C.P. / Localidade:', 1500), valueCell(d.ccp || 'â', 2000)],
   ]);
 
-  // ── Items table ────────────────────────────────────────────────────────────
+  // ââ Items table ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
   const COLS = [600, 5126, 1800, 1800];
   const itemRows = (d.lineas || []).map((l, i) => {
     const isAlt = i % 2 !== 0;
@@ -67,8 +67,8 @@ function buildFactura(d) {
     return new TableRow({ children: [
       numCell(l.ud || '1', COLS[0], isAlt),
       conceptCell(conceptLines, COLS[1], isAlt),
-      numCell(l.precio ? formatCurrency(l.precio) : '—', COLS[2], isAlt, AlignmentType.RIGHT),
-      numCell(l.subtotal ? formatCurrency(l.subtotal) : '—', COLS[3], isAlt, AlignmentType.RIGHT),
+      numCell(l.precio ? formatCurrency(l.precio) : 'â', COLS[2], isAlt, AlignmentType.RIGHT),
+      numCell(l.subtotal ? formatCurrency(l.subtotal) : 'â', COLS[3], isAlt, AlignmentType.RIGHT),
     ]});
   });
 
@@ -78,15 +78,15 @@ function buildFactura(d) {
     rows: [
       new TableRow({ children: [
         headerItemCell('Ud.', COLS[0]),
-        headerItemCell('Concepto / Descripción', COLS[1], AlignmentType.LEFT),
-        headerItemCell('Prezo Ud.\nPrecio Ud.', COLS[2]),
+        headerItemCell('Concepto / DescripciÃ³n', COLS[1], AlignmentType.LEFT),
+        headerItemCell('Precio Ud.', COLS[2]),
         headerItemCell('Total\nc/IVA incl.', COLS[3]),
       ]}),
       ...itemRows,
     ],
   });
 
-  // ── Notes (optional) ───────────────────────────────────────────────────────
+  // ââ Notes (optional) âââââââââââââââââââââââââââââââââââââââââââââââââââââââ
   const notesBlock = d.notas ? [
     new Table({
       width: { size: 9326, type: WidthType.DXA }, columnWidths: [9326],
@@ -100,7 +100,7 @@ function buildFactura(d) {
     emptyPara(120),
   ] : [emptyPara(120)];
 
-  // ── Bank ───────────────────────────────────────────────────────────────────
+  // ââ Bank âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
   const bankTable = new Table({
     width: { size: 9326, type: WidthType.DXA }, columnWidths: [9326],
     rows: [new TableRow({ children: [new TableCell({
@@ -119,19 +119,19 @@ function buildFactura(d) {
           spacing: { before: 0, after: 0 },
           children: [
             new TextRun({ text: `${d.banco || ''}   `, font: 'Arial', size: 18, bold: true, color: C.DARK }),
-            new TextRun({ text: d.iban || '—', font: 'Arial', size: 20, bold: true, color: '222222' }),
+            new TextRun({ text: d.iban || 'â', font: 'Arial', size: 20, bold: true, color: '222222' }),
           ],
         }),
       ],
     })]})],
   });
 
-  // ── Registro mercantil ─────────────────────────────────────────────────────
+  // ââ Registro mercantil âââââââââââââââââââââââââââââââââââââââââââââââââââââ
   const registroPara = new Paragraph({
     alignment: AlignmentType.CENTER,
     spacing: { before: 160, after: 0 },
     children: [new TextRun({
-      text: 'Inscrita R.M. Lugo · Tomo 223 · Folio 37 · Hoja LU4553 · Inscripción 1ª',
+      text: 'Inscrita R.M. Lugo Â· Tomo 223 Â· Folio 37 Â· Hoja LU4553 Â· InscripciÃ³n 1Âª',
       font: 'Arial', size: 16, italic: true, color: C.GRAY_TEXT,
     })],
   });
