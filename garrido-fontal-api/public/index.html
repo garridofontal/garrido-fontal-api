@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="gl">
+<html lang="es">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Garrido Fontal SLU — Documentos</title>
+  <title>Garrido Fontal SLU â Documentos</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
@@ -36,9 +36,9 @@
     .item-row { display: grid; grid-template-columns: 54px 1fr 105px 105px 34px; gap: 6px; margin-bottom: 6px; align-items: start; }
     .concepto-wrap { display: flex; flex-direction: column; gap: 3px; }
     .concepto-gl { font-size: 13px; line-height: 1.4; }
-    .concepto-es { font-size: 12px; color: var(--muted); font-style: italic; line-height: 1.35; border: 1px solid var(--border); border-radius: var(--radius); padding: 5px 8px; background: #fafbfb; }
+    .concepto-es { display: none !important; font-size: 12px; color: var(--muted); font-style: italic; line-height: 1.35; border: 1px solid var(--border); border-radius: var(--radius); padding: 5px 8px; background: #fafbfb; }
     .concepto-es:focus { outline: none; border-color: var(--dark); }
-    .btn-traducir { font-size: 11px; color: var(--dark); background: var(--light); border: 1px solid var(--border); border-radius: 5px; padding: 3px 8px; cursor: pointer; align-self: flex-start; white-space: nowrap; transition: all .15s; }
+    .btn-traducir { display: none !important; font-size: 11px; color: var(--dark); background: var(--light); border: 1px solid var(--border); border-radius: 5px; padding: 3px 8px; cursor: pointer; align-self: flex-start; white-space: nowrap; transition: all .15s; }
     .btn-traducir:hover { background: #e4ecec; }
     .btn-traducir.loading { opacity: .5; cursor: wait; }
     .item-row input { font-size: 13px; }
@@ -94,54 +94,54 @@
   <div class="topbar-logo">GF</div>
   <div>
     <h1>Garrido Fontal SLU</h1>
-    <p>Xerador de orzamentos e facturas</p>
+    <p>Generador de presupuestos y facturas</p>
   </div>
 </div>
 
 <div class="main">
   <div class="tabs">
-    <div class="tab active" onclick="switchTab('presuposto')">Orzamento / Presupuesto</div>
+    <div class="tab active" onclick="switchTab('presuposto')">Presupuesto</div>
     <div class="tab" onclick="switchTab('factura')">Factura</div>
-    <div class="tab" onclick="switchTab('converter')">Converter en Factura</div>
+    <div class="tab" onclick="switchTab('converter')">Convertir en Factura</div>
   </div>
 
-  <!-- ══════════════════ PRESUPOSTO ══════════════════ -->
+  <!-- ââââââââââââââââââ PRESUPOSTO ââââââââââââââââââ -->
   <div id="page-presuposto" class="page active">
     <div class="section">
-      <div class="section-title">Datos do documento</div>
+      <div class="section-title">Datos del documento</div>
       <div class="grid3">
-        <div class="field"><label>Nº Orzamento</label><input id="p-num" placeholder="P26-001" /></div>
-        <div class="field"><label>Data / Fecha</label><input id="p-fecha" type="date" /></div>
-        <div class="field"><label>Válido ata / Válido hasta</label><input id="p-validez" type="date" /></div>
+        <div class="field"><label>NÂº Orzamento</label><input id="p-num" placeholder="P26-001" /></div>
+        <div class="field"><label>Fecha</label><input id="p-fecha" type="date" /></div>
+        <div class="field"><label>VÃ¡lido ata / VÃ¡lido hasta</label><input id="p-validez" type="date" /></div>
       </div>
     </div>
 
     <div class="section">
       <div class="section-title">Cliente</div>
       <div class="grid2">
-        <div class="field full"><label>Nome / Nombre</label><input id="p-cnome" placeholder="Comunidade de Propietarios..." /></div>
-        <div class="field"><label>NIF / CIF</label><input id="p-cnif" placeholder="H-27XXXXXX" /></div>
-        <div class="field"><label>Enderezo / Dirección</label><input id="p-cdir" placeholder="Rúa..." /></div>
-        <div class="field"><label>C.P. / Localidade</label><input id="p-ccp" placeholder="27002 Lugo" /></div>
+        <div class="field full"><label>Nombre</label><input id="p-cnome" placeholder="Comunidade de Propietarios..." /></div>
+        <div class="field"><label>NIF/CIF</label><input id="p-cnif" placeholder="H-27XXXXXX" /></div>
+        <div class="field"><label>Enderezo / DirecciÃ³n</label><input id="p-cdir" placeholder="RÃºa..." /></div>
+        <div class="field"><label>C.P. / Localidad</label><input id="p-ccp" placeholder="27002 Lugo" /></div>
       </div>
     </div>
 
     <div class="section">
-      <div class="section-title">Obxecto / Objeto</div>
-      <input id="p-objeto" placeholder="Cambio de ventás de tellado / Sustitución de ventanas de tejado..." />
+      <div class="section-title">Objeto</div>
+      <input id="p-objeto" placeholder="Cambio de ventÃ¡s de tellado / SustituciÃ³n de ventanas de tejado..." />
     </div>
 
     <div class="section">
       <div class="section-title">Partidas</div>
       <div class="items-head">
         <span>Ud.</span>
-        <span>Concepto — escribe en galego, tradúcese en castellano</span>
-        <span style="text-align:right">Prezo Ud.</span>
+        <span>Concepto â escribe en galego, tradÃºcese en castellano</span>
+        <span style="text-align:right">Precio Ud.</span>
         <span style="text-align:right">Subtotal</span>
         <span></span>
       </div>
       <div id="p-lineas"></div>
-      <button class="btn-add" onclick="addLinea('p')">+ Engadir partida</button>
+      <button class="btn-add" onclick="addLinea('p')">+ Añadir partida</button>
       <div class="totals">
         <div class="iva-row">
           <span class="lbl">IVA</span>
@@ -150,9 +150,9 @@
             <option value="21" selected>21 %</option>
           </select>
         </div>
-        <div class="total-row"><span class="lbl">Base impoñible</span><span class="val" id="p-base">0,00 €</span></div>
-        <div class="total-row"><span class="lbl">IVA</span><span class="val" id="p-ivaval">0,00 €</span></div>
-        <div class="total-row"><span class="lbl">TOTAL</span><span class="val total-big" id="p-total">0,00 €</span></div>
+        <div class="total-row"><span class="lbl">Base impoÃ±ible</span><span class="val" id="p-base">0,00 â¬</span></div>
+        <div class="total-row"><span class="lbl">IVA</span><span class="val" id="p-ivaval">0,00 â¬</span></div>
+        <div class="total-row"><span class="lbl">TOTAL</span><span class="val total-big" id="p-total">0,00 â¬</span></div>
       </div>
     </div>
 
@@ -160,32 +160,32 @@
       <div class="section-title">Forma de pago</div>
       <div class="pay-mode">
         <div class="pay-btn active" id="pay-unico" onclick="setPayMode('unico')">
-          <strong>Pago único</strong>
-          <span>Abónase todo ao finalizar</span>
+          <strong>Pago Ãºnico</strong>
+          <span>AbÃ³nase todo ao finalizar</span>
         </div>
         <div class="pay-btn" id="pay-dous" onclick="setPayMode('dous')">
-          <strong>Dous pagos / Dos pagos</strong>
-          <span>1ª provisión · 2ª man de obra</span>
+          <strong>Dos pagos</strong>
+          <span>1Âª provisiÃ³n Â· 2Âª man de obra</span>
         </div>
         <div class="pay-btn" id="pay-tres" onclick="setPayMode('tres')">
           <strong>Tres pagos</strong>
-          <span>Provisión · inicio · final</span>
+          <span>ProvisiÃ³n Â· inicio Â· final</span>
         </div>
       </div>
       <div id="bloque-unico" style="margin-top:10px;">
         <div class="field">
-          <label>Importe total (€ — podes deixalo baleiro e usarase o total calculado)</label>
-          <input id="p-pagoUnico" type="number" step="0.01" placeholder="Déixalo baleiro para usar o total automático" />
+          <label>Importe total (â¬ â podes deixalo baleiro e usarase o total calculado)</label>
+          <input id="p-pagoUnico" type="number" step="0.01" placeholder="DÃ©ixalo baleiro para usar o total automÃ¡tico" />
         </div>
       </div>
       <div id="bloque-dous" style="margin-top:10px; display:none;">
         <div class="grid2">
           <div class="field">
-            <label>1ª Factura — Provisión de materiais (€)</label>
+            <label>1Âª Factura â ProvisiÃ³n de materiais (â¬)</label>
             <input id="p-pago1" type="number" step="0.01" placeholder="0.00" />
           </div>
           <div class="field">
-            <label>2ª Factura — Man de obra ao finalizar (€)</label>
+            <label>2Âª Factura â Man de obra ao finalizar (â¬)</label>
             <input id="p-pago2" type="number" step="0.01" placeholder="0.00" />
           </div>
         </div>
@@ -193,15 +193,15 @@
       <div id="bloque-tres" style="margin-top:10px; display:none;">
         <div class="grid3">
           <div class="field">
-            <label>1ª — Provisión de materiais (€)</label>
+            <label>1Âª â ProvisiÃ³n de materiais (â¬)</label>
             <input id="p-pago1-t" type="number" step="0.01" placeholder="0.00" />
           </div>
           <div class="field">
-            <label>2ª — Inicio da obra (€)</label>
+            <label>2Âª â Inicio da obra (â¬)</label>
             <input id="p-pago2-t" type="number" step="0.01" placeholder="0.00" />
           </div>
           <div class="field">
-            <label>3ª — Man de obra final (€)</label>
+            <label>3Âª â Man de obra final (â¬)</label>
             <input id="p-pago3-t" type="number" step="0.01" placeholder="0.00" />
           </div>
         </div>
@@ -210,17 +210,17 @@
 
     <div class="section">
       <div class="section-title">Notas (opcional)</div>
-      <textarea id="p-notas" placeholder="Ex: Non se inclúen remates interiores nin pintura. Os prezos inclúen man de obra e materiais VELUX..."></textarea>
+      <textarea id="p-notas" placeholder="Ex: Non se inclÃºen remates interiores nin pintura. Os prezos inclÃºen man de obra e materiais VELUX..."></textarea>
     </div>
   </div>
 
-  <!-- ══════════════════ FACTURA ══════════════════ -->
+  <!-- ââââââââââââââââââ FACTURA ââââââââââââââââââ -->
   <div id="page-factura" class="page">
     <div class="section">
-      <div class="section-title">Datos da factura</div>
+      <div class="section-title">Datos de la factura</div>
       <div class="grid3">
-        <div class="field"><label>Nº Factura</label><input id="f-num" placeholder="32/26" /></div>
-        <div class="field"><label>Data / Fecha</label><input id="f-fecha" type="date" /></div>
+        <div class="field"><label>NÂº Factura</label><input id="f-num" placeholder="32/26" /></div>
+        <div class="field"><label>Fecha</label><input id="f-fecha" type="date" /></div>
         <div></div>
       </div>
     </div>
@@ -228,10 +228,10 @@
     <div class="section">
       <div class="section-title">Cliente</div>
       <div class="grid2">
-        <div class="field full"><label>Nome / Nombre</label><input id="f-cnome" placeholder="Carmen Pita Castro" /></div>
-        <div class="field"><label>NIF / CIF</label><input id="f-cnif" placeholder="33808393A" /></div>
-        <div class="field"><label>Enderezo / Dirección</label><input id="f-cdir" placeholder="Rúa Armónica Nº 42, 2ºB" /></div>
-        <div class="field"><label>C.P. / Localidade</label><input id="f-ccp" placeholder="27002 Lugo" /></div>
+        <div class="field full"><label>Nombre</label><input id="f-cnome" placeholder="Carmen Pita Castro" /></div>
+        <div class="field"><label>NIF/CIF</label><input id="f-cnif" placeholder="33808393A" /></div>
+        <div class="field"><label>Enderezo / DirecciÃ³n</label><input id="f-cdir" placeholder="RÃºa ArmÃ³nica NÂº 42, 2ÂºB" /></div>
+        <div class="field"><label>C.P. / Localidad</label><input id="f-ccp" placeholder="27002 Lugo" /></div>
       </div>
     </div>
 
@@ -239,12 +239,12 @@
       <div class="section-title">Partidas</div>
       <div class="items-head">
         <span>Ud.</span><span>Concepto</span>
-        <span style="text-align:right">Prezo Ud.</span>
+        <span style="text-align:right">Precio Ud.</span>
         <span style="text-align:right">Subtotal</span>
         <span></span>
       </div>
       <div id="f-lineas"></div>
-      <button class="btn-add" onclick="addLinea('f')">+ Engadir partida</button>
+      <button class="btn-add" onclick="addLinea('f')">+ Añadir partida</button>
       <div class="totals">
         <div class="iva-row">
           <span class="lbl">IVA</span>
@@ -253,14 +253,14 @@
             <option value="21" selected>21 %</option>
           </select>
         </div>
-        <div class="total-row"><span class="lbl">Base impoñible</span><span class="val" id="f-base">0,00 €</span></div>
-        <div class="total-row"><span class="lbl">IVA</span><span class="val" id="f-ivaval">0,00 €</span></div>
-        <div class="total-row"><span class="lbl">TOTAL</span><span class="val total-big" id="f-total">0,00 €</span></div>
+        <div class="total-row"><span class="lbl">Base impoÃ±ible</span><span class="val" id="f-base">0,00 â¬</span></div>
+        <div class="total-row"><span class="lbl">IVA</span><span class="val" id="f-ivaval">0,00 â¬</span></div>
+        <div class="total-row"><span class="lbl">TOTAL</span><span class="val total-big" id="f-total">0,00 â¬</span></div>
       </div>
     </div>
 
     <div class="section">
-      <div class="section-title">Conta bancaria</div>
+      <div class="section-title">Cuenta bancaria</div>
       <div class="bank-toggle">
         <div class="bank-btn active" id="btn-bbva" onclick="selectBank('bbva')">
           <strong>BBVA</strong><br>ES74 0182 0625 8202 0183 4454
@@ -273,19 +273,19 @@
 
     <div class="section">
       <div class="section-title">Notas (opcional)</div>
-      <textarea id="f-notas" placeholder="Ex: Factura de provisión de materiais. Pendente segunda factura de man de obra ao finalizar..."></textarea>
+      <textarea id="f-notas" placeholder="Ex: Factura de provisiÃ³n de materiais. Pendente segunda factura de man de obra ao finalizar..."></textarea>
     </div>
   </div>
 
   <button class="btn-gen" id="btn-gen" onclick="generar()">
-    ⬇ Xerar e descargar documento Word
+    â¬ Xerar e descargar documento Word
   </button>
   <div class="status" id="status"></div>
 
-  <!-- ══════════════════ CONVERTER ══════════════════ -->
+  <!-- ââââââââââââââââââ CONVERTER ââââââââââââââââââ -->
   <div id="page-converter" class="page">
     <div class="section">
-      <div class="section-title">Cargar orzamento Word / Cargar presupuesto Word</div>
+      <div class="section-title">Cargar presupuesto Word</div>
       <p style="font-size:13px;color:var(--muted);margin-bottom:12px;">
         Sube o arquivo <strong>.docx</strong> do orzamento xerado. Os datos cargaranse no formulario de factura para que os poidas revisar e modificar antes de xerar.
       </p>
@@ -294,9 +294,9 @@
         ondragover="event.preventDefault();this.style.borderColor='var(--dark)';this.style.background='var(--light)'"
         ondragleave="this.style.borderColor='var(--border)';this.style.background='var(--white)'"
         ondrop="handleDrop(event)">
-        <div style="font-size:28px;margin-bottom:8px;">📄</div>
-        <div style="font-size:14px;font-weight:500;color:var(--text);">Arrastra o .docx aquí ou preme para seleccionar</div>
-        <div style="font-size:12px;color:var(--muted);margin-top:4px;">Só arquivos .docx xerados por esta aplicación</div>
+        <div style="font-size:28px;margin-bottom:8px;">ð</div>
+        <div style="font-size:14px;font-weight:500;color:var(--text);">Arrastra o .docx aquÃ­ ou preme para seleccionar</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:4px;">SÃ³ arquivos .docx xerados por esta aplicaciÃ³n</div>
         <input type="file" id="file-input" accept=".docx" style="display:none" onchange="handleFileSelect(event)" />
       </div>
       <div id="conv-status" style="margin-top:12px;font-size:13px;display:none;"></div>
@@ -310,10 +310,10 @@ let bank = 'bbva';
 let payMode = 'unico';
 let cnt = { p: 0, f: 0 };
 
-// ── Number formatter (punto miles, coma decimales) ──────────────────────────────
+// ââ Number formatter (punto miles, coma decimales) ââââââââââââââââââââââââââââââ
 function formatNum(val) {
   const n = parseFloat(String(val).replace(',', '.'));
-  if (isNaN(n)) return '—';
+  if (isNaN(n)) return 'â';
   return n.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
@@ -338,7 +338,7 @@ function switchTab(t) {
   document.getElementById('btn-gen').style.display = t === 'converter' ? 'none' : 'flex';
 }
 
-// ── Auto-traducción ─────────────────────────────────────────────────────────────
+// ââ Auto-traducciÃ³n âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 async function traducirConcepto(px, id) {
   const glEl = document.getElementById(px + '-gl-' + id);
   const esEl = document.getElementById(px + '-es-' + id);
@@ -357,11 +357,11 @@ async function traducirConcepto(px, id) {
   } catch(e) {
     console.error('Erro traducindo:', e);
   } finally {
-    if (btnEl) { btnEl.classList.remove('loading'); btnEl.textContent = '↓ Traducir'; }
+    if (btnEl) { btnEl.classList.remove('loading'); btnEl.textContent = 'â Traducir'; }
   }
 }
 
-// ── Converter: load presuposto .docx → prefill factura form ────────────────────
+// ââ Converter: load presuposto .docx â prefill factura form ââââââââââââââââââââ
 function handleDrop(e) {
   e.preventDefault();
   document.getElementById('drop-zone').style.borderColor = 'var(--border)';
@@ -375,10 +375,10 @@ function handleFileSelect(e) {
 }
 async function processFile(file) {
   if (!file.name.endsWith('.docx')) {
-    showConvStatus('err', 'O arquivo debe ser un .docx xerado por esta aplicación.');
+    showConvStatus('err', 'O arquivo debe ser un .docx xerado por esta aplicaciÃ³n.');
     return;
   }
-  showConvStatus('loading', 'Lendo o arquivo...');
+  showConvStatus('loading', 'Leyendo el archivo...');
   try {
     const formData = new FormData();
     formData.append('file', file);
@@ -386,10 +386,10 @@ async function processFile(file) {
     if (!resp.ok) throw new Error((await resp.json()).error || resp.statusText);
     const d = await resp.json();
     fillFacturaFromPresuposto(d);
-    showConvStatus('ok', '✓ Datos cargados. Podes revisalos na pestaña "Factura" antes de xerar.');
+    showConvStatus('ok', 'â Datos cargados. Podes revisalos na pestaÃ±a "Factura" antes de xerar.');
     setTimeout(() => switchTab('factura'), 1200);
   } catch(e) {
-    showConvStatus('err', 'Erro ao ler o arquivo: ' + e.message);
+    showConvStatus('err', 'Error al leer el archivo: ' + e.message);
   }
 }
 function showConvStatus(type, msg) {
@@ -416,7 +416,7 @@ function fillFacturaFromPresuposto(d) {
     addLinea('f');
     const id = cnt.f;
     document.getElementById('f-ud-' + id).value = l.ud || '1';
-    // Separar concepto en GL (1ª línea) y ES (resto) si viene con salto de línea
+    // Separar concepto en GL (1Âª lÃ­nea) y ES (resto) si viene con salto de lÃ­nea
     const partes = String(l.concepto || '').split('\n');
     const glEl = document.getElementById('f-gl-' + id);
     const esEl = document.getElementById('f-es-' + id);
@@ -443,11 +443,11 @@ function addLinea(px) {
   div.className = 'item-row';
   div.id = px + '-linea-' + id;
 
-  // Misma estructura para presupuesto y factura: GL + botón traducir + ES
+  // Misma estructura para presupuesto y factura: GL + botÃ³n traducir + ES
   const conceptoHTML = `<div class="concepto-wrap">
-    <textarea class="concepto-gl" placeholder="Concepto en galego (1ª liña)" id="${px}-gl-${id}"></textarea>
-    <button class="btn-traducir" id="${px}-btn-tr-${id}" type="button" onclick="traducirConcepto('${px}',${id})">↓ Traducir</button>
-    <textarea class="concepto-es" placeholder="Tradución en castellano (editable)" id="${px}-es-${id}"></textarea>
+    <textarea class="concepto-gl" placeholder="Concepto en galego (1Âª liÃ±a)" id="${px}-gl-${id}"></textarea>
+    <button class="btn-traducir" id="${px}-btn-tr-${id}" type="button" onclick="traducirConcepto('${px}',${id})">â Traducir</button>
+    <textarea class="concepto-es" placeholder="TraduciÃ³n en castellano (editable)" id="${px}-es-${id}"></textarea>
    </div>`;
 
   div.innerHTML = `
@@ -455,7 +455,7 @@ function addLinea(px) {
     ${conceptoHTML}
     <input type="number" step="0.01" placeholder="0.00" id="${px}-precio-${id}" />
     <input type="number" step="0.01" placeholder="0.00" id="${px}-subtotal-${id}" oninput="calc('${px}')" />
-    <button class="btn-del" onclick="delLinea('${px}',${id})">×</button>
+    <button class="btn-del" onclick="delLinea('${px}',${id})">Ã</button>
   `;
   box.appendChild(div);
   document.getElementById(px + '-precio-' + id).addEventListener('input', () => calcRow(px, id));
@@ -483,7 +483,7 @@ function calc(px) {
   const ivaPct = parseFloat(document.getElementById(px + '-iva').value) / 100;
   const ivaVal = base * ivaPct;
   const total = base + ivaVal;
-  const fmt = n => formatNum(n) + ' €';
+  const fmt = n => formatNum(n) + ' â¬';
   document.getElementById(px + '-base').textContent = fmt(base);
   document.getElementById(px + '-ivaval').textContent = fmt(ivaVal);
   document.getElementById(px + '-total').textContent = fmt(total);
@@ -514,7 +514,7 @@ function numVal(id) { return parseFloat(document.getElementById(id)?.value || 0)
 function strVal(id) { return (document.getElementById(id)?.value || '').trim(); }
 function rawNum(id) {
   return (document.getElementById(id)?.textContent || '0')
-    .replace(/\s*€/, '').replace(/\./g, '').replace(',', '.') || '0';
+    .replace(/\s*â¬/, '').replace(/\./g, '').replace(',', '.') || '0';
 }
 
 function buildPayload() {
@@ -557,7 +557,7 @@ async function generar() {
   btn.disabled = true;
   st.className = 'status loading';
   st.style.display = 'block';
-  st.textContent = 'Xerando documento...';
+  st.textContent = 'Generando documento...';
   try {
     const payload = buildPayload();
     const endpoint = tab === 'presuposto' ? '/api/presuposto' : '/api/factura';
@@ -568,7 +568,7 @@ async function generar() {
     });
     if (!resp.ok) {
       const err = await resp.json().catch(() => ({ error: resp.statusText }));
-      throw new Error(err.error || 'Erro no servidor');
+      throw new Error(err.error || 'Error en el servidor');
     }
     const blob = await resp.blob();
     const url = URL.createObjectURL(blob);
@@ -579,7 +579,7 @@ async function generar() {
     a.href = url; a.download = filename; a.click();
     URL.revokeObjectURL(url);
     st.className = 'status ok';
-    st.textContent = '✓ Documento descargado: ' + filename;
+    st.textContent = 'â Documento descargado: ' + filename;
   } catch(e) {
     st.className = 'status err';
     st.textContent = 'Erro: ' + e.message;
