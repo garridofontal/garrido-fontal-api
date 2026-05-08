@@ -18,6 +18,16 @@ const C = {
 const LOGO = fs.readFileSync(path.join(__dirname, '..', 'logo.png'));
 
 // ── Number formatting (ES: 1.234,56) ──────────────────────────────────────────
+
+// ── Date formatting (dd/mm/aaaa) ─────────────────────────────────────────────
+function formatDate(val) {
+  if (!val) return '';
+  const s = String(val).trim();
+  const m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (m) return m[3] + '/' + m[2] + '/' + m[1];
+  return s;
+}
+
 function formatNum(val) {
   if (val === null || val === undefined || val === '') return '0,00';
   let s = String(val).trim();
@@ -249,5 +259,5 @@ module.exports = {
   labelCell, valueCell,
   buildHeader, buildSeparator, buildFooter, buildTotals,
   headerItemCell, conceptCell, numCell, buildMetaTable,
-  formatNum, formatCurrency,
+  formatNum, formatCurrency, formatDate,
 };
