@@ -121,7 +121,7 @@
       <div class="grid2">
         <div class="field full"><label>Nombre</label><input id="p-cnome" placeholder="Comunidade de Propietarios..." /></div>
         <div class="field"><label>NIF/CIF</label><input id="p-cnif" placeholder="H-27XXXXXX" /></div>
-        <div class="field"><label>Enderezo / Dirección</label><input id="p-cdir" placeholder="Rúa..." /></div>
+        <div class="field"><label>Dirección</label><input id="p-cdir" placeholder="Rúa..." /></div>
         <div class="field"><label>C.P. / Localidad</label><input id="p-ccp" placeholder="27002 Lugo" /></div>
       </div>
     </div>
@@ -230,7 +230,7 @@
       <div class="grid2">
         <div class="field full"><label>Nombre</label><input id="f-cnome" placeholder="Carmen Pita Castro" /></div>
         <div class="field"><label>NIF/CIF</label><input id="f-cnif" placeholder="33808393A" /></div>
-        <div class="field"><label>Enderezo / Dirección</label><input id="f-cdir" placeholder="RÃºa ArmÃ³nica NÂº 42, 2ÂºB" /></div>
+        <div class="field"><label>Dirección</label><input id="f-cdir" placeholder="RÃºa ArmÃ³nica NÂº 42, 2ÂºB" /></div>
         <div class="field"><label>C.P. / Localidad</label><input id="f-ccp" placeholder="27002 Lugo" /></div>
       </div>
     </div>
@@ -445,7 +445,7 @@ function addLinea(px) {
 
   // Misma estructura para presupuesto y factura: GL + botÃ³n traducir + ES
   const conceptoHTML = `<div class="concepto-wrap">
-    <textarea class="concepto-gl" placeholder="Concepto (descripción liÃ±a)" id="${px}-gl-${id}"></textarea>
+    <textarea class="concepto-gl" placeholder="Concepto (descripción)" id="${px}-gl-${id}"></textarea>
     <button class="btn-traducir" id="${px}-btn-tr-${id}" type="button" onclick="traducirConcepto('${px}',${id})">â Traducir</button>
     <textarea class="concepto-es" placeholder="TraduciÃ³n en castellano (editable)" id="${px}-es-${id}"></textarea>
    </div>`;
