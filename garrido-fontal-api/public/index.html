@@ -455,7 +455,7 @@ function addLinea(px) {
     ${conceptoHTML}
     <input type="number" step="0.01" placeholder="0.00" id="${px}-precio-${id}" />
     <input type="number" step="0.01" placeholder="0.00" id="${px}-subtotal-${id}" oninput="calc('${px}')" />
-    <button class="btn-del" onclick="delLinea('${px}',${id})">Ã</button>
+    <button class="btn-del" onclick="delLinea('${px}',${id})">×</button>
   `;
   box.appendChild(div);
   document.getElementById(px + '-precio-' + id).addEventListener('input', () => calcRow(px, id));
