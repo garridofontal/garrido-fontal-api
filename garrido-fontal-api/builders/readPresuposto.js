@@ -19,12 +19,12 @@ async function readPresuposto(buffer) {
   };
 
   // ── CLIENTE ───────────────────────────────────────────────────────────────
-  // Formato real de mammoth con esta app:
-  //   "Cliente:"       <- línea sola
+  // Formato real de mammoth (presupuesto en castellano):
+  //   "Cliente:"
   //   "Carmen Pita Castro"
   //   "NIF/CIF:"
   //   "33808393A"
-  //   "Enderezo:"
+  //   "Dirección:"
   //   "Rúa Armónica Nº 42, 2ºB"
   //   "C.P.:"
   //   "27002 Lugo"
@@ -38,7 +38,8 @@ async function readPresuposto(buffer) {
     if (/^NIF\/CIF:$/i.test(l) && !data.cnif) {
       data.cnif = lines[i + 1] || '';
     }
-    if (/^Enderezo:$/i.test(l) && !data.cdir) {
+    // Aceptar tanto "Dirección:" (nuevo) como "Enderezo:" (versiones antiguas)
+    if (/^(Dirección|Direccion|Enderezo):$/i.test(l) && !data.cdir) {
       data.cdir = lines[i + 1] || '';
     }
     if (/^C\.P\.:$/i.test(l) && !data.ccp) {
@@ -46,19 +47,20 @@ async function readPresuposto(buffer) {
     }
   }
 
-  // ── TOTAIS ────────────────────────────────────────────────────────────────
-  // Formato real:
-  //   "Base impoñible / Base imponible:"
-  //   "1461.00"          <- línea siguiente (sin €)
+  // ── TOTALES ───────────────────────────────────────────────────────────────
+  // Formato real (en castellano):
+  //   "Base imponible:"
+  //   "1.461,00 €"
   //   "IVA 21%:"
-  //   "306.81"
+  //   "306,81 €"
   //   "TOTAL:"
-  //   "1767.81"
+  //   "1.767,81 €"
 
   for (let i = 0; i < lines.length; i++) {
     const l = lines[i];
 
-    if (/^Base impo/i.test(l) && !data.base) {
+    // Aceptar "Base imponible:" (nuevo) y "Base impoñible" (antiguo bilingüe)
+    if (/^Base\s+impo/i.test(l) && !data.base) {
       const next = lines[i + 1] || '';
       const m = next.match(/^[\d.,]+/);
       if (m) data.base = toNum(m[0]);
@@ -78,7 +80,7 @@ async function readPresuposto(buffer) {
       if (m) data.total = toNum(m[0]);
     }
 
-    // También por si vienen en la misma línea con €
+    // Inline (todo en una línea)
     const bInline = l.match(/[Bb]ase[^0-9€]*([\d.]+,\d{2})\s*€/);
     if (bInline && !data.base) data.base = toNum(bInline[1]);
 
@@ -90,12 +92,11 @@ async function readPresuposto(buffer) {
   }
 
   // ── PARTIDAS ──────────────────────────────────────────────────────────────
-  // Formato real de mammoth:
+  // Formato real (presupuesto en castellano):
   //   "1"                                         <- ud sola
-  //   "Montaxe de VELUX SK06..."                  <- concepto galego
-  //   "Montaje de VELUX SK06..."                  <- concepto castellano (itálica)
-  //   "1461.00 €"                                 <- precio
-  //   "1461.00 €"                                 <- subtotal
+  //   "Ventana Velux GGL SK06..."                 <- concepto único
+  //   "1.461,00 €"                                <- precio
+  //   "1.461,00 €"                                <- subtotal
 
   let inItems  = false;
   let state    = null; // null | 'gotUd' | 'gotConcepto'
@@ -104,26 +105,25 @@ async function readPresuposto(buffer) {
   for (let i = 0; i < lines.length; i++) {
     const l = lines[i];
 
-    if (/^(Ud\.|Concepto|Prezo|Precio|Total)/i.test(l)) { inItems = true; continue; }
-    if (/^Notas\s*\//i.test(l) || /^Base\s+impo/i.test(l) || /^Forma\s+de\s+pago/i.test(l)) {
+    // Cabeceras de tabla — entrar en modo items
+    if (/^(Ud\.|Concepto|Precio|Prezo|Total)/i.test(l)) { inItems = true; continue; }
+    // Salir al ver secciones siguientes
+    if (/^Notas\s*[:\/]/i.test(l) || /^Base\s+impo/i.test(l) || /^Forma\s+de\s+pago/i.test(l) || /^Objeto/i.test(l)) {
       inItems = false; current = null; state = null;
     }
     if (!inItems) continue;
 
-    // Precio suelto "1461.00 €" o "1.461,00 €"
+    // Precio "1.461,00 €" o "1461.00 €"
     const priceM = l.match(/^([\d.,]+)\s*€\s*$/);
 
     // Ud sola (solo dígitos)
     if (/^\d+$/.test(l) && !priceM) {
-      if (current && state === 'gotUd') {
-        // Ud anterior sin concepto, saltar
-      }
       current = { ud: l, concepto: '', precio: '0', subtotal: '0' };
       state = 'gotUd';
       continue;
     }
 
-    // Precio: "1461.00 €"
+    // Precio
     if (priceM && current) {
       const val = toNum(priceM[1]);
       if (current.precio === '0') {
@@ -131,7 +131,6 @@ async function readPresuposto(buffer) {
         current.subtotal = val;
       } else if (current.subtotal === current.precio) {
         current.subtotal = val;
-        // Item completo — añadir si tiene concepto
         if (current.concepto) data.lineas.push(current);
         current = null; state = null;
       }
@@ -141,14 +140,15 @@ async function readPresuposto(buffer) {
     // Em-dash = precio incluido
     if (/^[—–]$/.test(l)) continue;
 
-    // Concepto
+    // Concepto principal (1ª línea de texto tras la Ud)
     if (current && state === 'gotUd' && l.length > 2) {
       current.concepto = l;
       state = 'gotConcepto';
       continue;
     }
 
-    // Segunda línea del concepto (traducción castellano)
+    // Línea adicional del concepto (descripción larga, multilínea)
+    // Ya no traducimos: solo añadimos como continuación
     if (current && state === 'gotConcepto' && l.length > 2 && !priceM) {
       if (!current.concepto.includes('\n')) {
         current.concepto += '\n' + l;
