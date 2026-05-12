@@ -479,6 +479,20 @@
     </div>
 
     <div class="section">
+      <div class="section-title">Cuenta bancaria</div>
+      <div class="pagos" style="grid-template-columns: 1fr 1fr;">
+        <div class="pago-opt active" data-banco="bbva" onclick="setBanco('bbva')">
+          <strong>BBVA</strong>
+          <span>ES74 0182 0625 8202 0183 4454</span>
+        </div>
+        <div class="pago-opt" data-banco="sabadell" onclick="setBanco('sabadell')">
+          <strong>Sabadell</strong>
+          <span>ES12 0081 0497 7400 0148 7849</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
       <div class="section-title">Notas (opcional)</div>
       <div class="field">
         <textarea id="f-notas" rows="3" placeholder="Ej: Factura de provisión de materiales. Pendiente segunda factura de mano de obra al finalizar..."></textarea>
@@ -510,7 +524,7 @@
 // ─── Estado ──────────────────────────────────────────────────────────────
 const state = {
   p: { lineas: [], pagamento: 'unico' },
-  f: { lineas: [] }
+  f: { lineas: [], banco: 'bbva' }
 };
 
 // ─── Tabs ────────────────────────────────────────────────────────────────
@@ -603,9 +617,15 @@ function calc(px) {
 // ─── Forma de pago ───────────────────────────────────────────────────────
 function setPago(modo) {
   state.p.pagamento = modo;
-  document.querySelectorAll('.pago-opt').forEach(x => x.classList.remove('active'));
+  document.querySelectorAll('.pago-opt[data-pago]').forEach(x => x.classList.remove('active'));
   document.querySelector('.pago-opt[data-pago="' + modo + '"]').classList.add('active');
   renderPagoDetalles();
+}
+
+function setBanco(b) {
+  state.f.banco = b;
+  document.querySelectorAll('.pago-opt[data-banco]').forEach(x => x.classList.remove('active'));
+  document.querySelector('.pago-opt[data-banco="' + b + '"]').classList.add('active');
 }
 
 function renderPagoDetalles() {
@@ -735,6 +755,7 @@ async function generarFactura() {
     ivaVal: rawNum(document.getElementById('f-ivaval').textContent).toFixed(2),
     total: rawNum(document.getElementById('f-total').textContent).toFixed(2),
     notas: document.getElementById('f-notas').value,
+    banco: state.f.banco,
   };
 
   try {
