@@ -11,6 +11,12 @@ const {
   formatCurrency, formatDate,
 } = require('./helpers');
 
+// ── Datos bancarios ─────────────────────────────────────────────────────────
+const BANCOS = {
+  bbva:     { nombre: 'BBVA',     iban: 'ES74 0182 0625 8202 0183 4454' },
+  sabadell: { nombre: 'Sabadell', iban: 'ES12 0081 0497 7400 0148 7849' },
+};
+
 function buildFactura(d) {
   // ── Title bar
   const titleTable = new Table({
@@ -100,7 +106,10 @@ function buildFactura(d) {
     emptyPara(120),
   ] : [emptyPara(120)];
 
-  // ── Bank
+  // ── Banco seleccionado (resuelve desde la clave del frontend: 'bbva' o 'sabadell')
+  const bancoKey = String(d.banco || 'bbva').toLowerCase();
+  const banco = BANCOS[bancoKey] || BANCOS.bbva;
+
   const bankTable = new Table({
     width: { size: 9326, type: WidthType.DXA }, columnWidths: [9326],
     rows: [new TableRow({ children: [new TableCell({
@@ -118,8 +127,8 @@ function buildFactura(d) {
         new Paragraph({
           spacing: { before: 0, after: 0 },
           children: [
-            new TextRun({ text: `${d.banco || ''}   `, font: 'Arial', size: 18, bold: true, color: C.DARK }),
-            new TextRun({ text: d.iban || '—', font: 'Arial', size: 20, bold: true, color: '222222' }),
+            new TextRun({ text: `${banco.nombre}   `, font: 'Arial', size: 18, bold: true, color: C.DARK }),
+            new TextRun({ text: banco.iban, font: 'Arial', size: 20, bold: true, color: '222222' }),
           ],
         }),
       ],
