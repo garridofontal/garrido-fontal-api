@@ -1,0 +1,17 @@
+{
+  "name": "Ficheiro de Clientes — Garrido Fontal",
+  "short_name": "Clientes",
+  "description": "Directorio de clientes de Garrido Fontal SLU: CIF/NIF, enderezo e histórico de facturas.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#1b2221",
+  "theme_color": "#1b2221",
+  "lang": "gl-ES",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icon-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
