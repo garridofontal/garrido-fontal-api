@@ -1,13 +1,13 @@
-// Ficheiro de Clientes — service worker
-// Sube la versión cada vez que cambien los datos para forzar la actualización.
-const VERSION = 'clientes-v3';
+// Service worker do Ficheiro de Clientes — Garrido Fontal SLU
+const VERSION = 'clientes-v4';
 const ARCHIVOS = [
   './',
   './index.html',
   './manifest.webmanifest',
   './icon-192.png',
   './icon-512.png',
-  './apple-touch-icon.png'
+  './apple-touch-icon.png',
+  './favicon.png'
 ];
 
 self.addEventListener('install', e => {
@@ -22,26 +22,32 @@ self.addEventListener('activate', e => {
   );
 });
 
-// Red primero para el HTML (así ve los datos nuevos si hay cobertura),
-// caché como respaldo inmediato cuando no hay conexión.
 self.addEventListener('fetch', e => {
   const req = e.request;
   if (req.method !== 'GET') return;
-  const esPagina = req.mode === 'navigate' || (req.headers.get('accept') || '').includes('text/html');
-  if (esPagina) {
+  const esHTML = req.mode === 'navigate' ||
+    (req.headers.get('accept') || '').includes('text/html');
+
+  if (esHTML) {
+    // rede primeiro: sempre os datos máis recentes cando hai conexión
     e.respondWith(
       fetch(req)
-        .then(r => { const copia = r.clone(); caches.open(VERSION).then(c => c.put(req, copia)); return r; })
+        .then(r => {
+          const copia = r.clone();
+          caches.open(VERSION).then(c => c.put(req, copia));
+          return r;
+        })
         .catch(() => caches.match(req).then(r => r || caches.match('./index.html')))
     );
-  } else {
-    e.respondWith(
-      caches.match(req).then(r => r || fetch(req).then(resp => {
-        if (resp.ok && new URL(req.url).origin === location.origin) {
-          const copia = resp.clone(); caches.open(VERSION).then(c => c.put(req, copia));
-        }
-        return resp;
-      }).catch(() => r))
-    );
+    return;
   }
+
+  // o resto: caché primeiro
+  e.respondWith(
+    caches.match(req).then(r => r || fetch(req).then(resp => {
+      const copia = resp.clone();
+      caches.open(VERSION).then(c => c.put(req, copia));
+      return resp;
+    }).catch(() => r))
+  );
 });
