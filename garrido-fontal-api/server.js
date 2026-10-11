@@ -6,6 +6,9 @@ const { Packer } = require('docx');
 const { buildPresuposto }   = require('./builders/presuposto');
 const { buildFactura }      = require('./builders/factura');
 const { readPresuposto }    = require('./builders/readPresuposto');
+const { migrate }          = require('./db');
+const organizador          = require('./organizador');
+// v2026-10-11 organizador de trabajos
 
 const app    = express();
 const PORT   = process.env.PORT || 3000;
@@ -14,6 +17,9 @@ const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 
 app.use(cors());
 app.use(express.json({ limit: '2mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
+
+// ── Organizador de trabajos (API) ─────────────────────────────────────────────
+app.use('/api/org', organizador);
 
 // ── Health check ─────────────────────────────────────────────────────────────
 app.get('/health', (_req, res) => res.json({ ok: true }));
@@ -95,4 +101,7 @@ app.post('/api/factura', async (req, res) => {
   }
 });
 
-app.listen(PORT, () => console.log(`Garrido Fontal API → http://localhost:${PORT}`));
+app.listen(PORT, () => {
+  console.log(`Garrido Fontal API → http://localhost:${PORT}`);
+  migrate().catch((e) => console.error('Organizador: erro creando a base de datos', e));
+});
