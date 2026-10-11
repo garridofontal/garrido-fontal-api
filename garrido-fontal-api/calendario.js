@@ -46,7 +46,9 @@ async function conectar() {
       const buscar = async () => (await client.fetchCalendars()).find((c) => String(c.displayName || '').trim().toLowerCase() === NOMBRE_CAL.toLowerCase());
       let cal = await buscar();
       if (!cal) {
-        const url = new URL('trabajos-garrido-fontal/', client.account.homeUrl).href;
+        const todos = await client.fetchCalendars();
+        const home = (client.account && client.account.homeUrl) || (todos[0] && new URL('..', todos[0].url.endsWith('/') ? todos[0].url : todos[0].url + '/').href);
+        const url = new URL('trabajos-garrido-fontal/', home).href;
         try { await client.makeCalendar({ url, props: { displayname: NOMBRE_CAL, 'I:calendar-color': '#2E4A4AFF' } }); } catch (e) { /* se reintenta abajo */ }
         cal = await buscar();
       }
