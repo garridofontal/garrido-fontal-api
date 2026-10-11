@@ -1,5 +1,5 @@
 // Service worker de Trabajos — Garrido Fontal SLU
-const VERSION = 'trabajos-v1';
+const VERSION = 'trabajos-v2';
 const ARCHIVOS = ['./', './index.html', './manifest.webmanifest'];
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(VERSION).then((c) => c.addAll(ARCHIVOS)).then(() => self.skipWaiting()));

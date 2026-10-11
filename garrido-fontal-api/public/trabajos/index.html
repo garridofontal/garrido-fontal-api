@@ -245,7 +245,7 @@ function vLogin() {
 async function vInicio() {
   app().innerHTML = shell('inicio', '<p class="empty">Cargando…</p>');
   const params = new URLSearchParams({ tab: S.tab, estado: S.estado, tipo: S.tipo, orden: S.orden, q: S.q });
-  const [res, lista] = await Promise.all([api('/resumen'), api('/trabajos?' + params)]);
+  const [res, lista, ag] = await Promise.all([api('/resumen'), api('/trabajos?' + params), api('/agenda').catch(() => [])]);
   const h = new Date().getHours();
   const saludo = h < 14 ? 'Buenos días' : h < 21 ? 'Buenas tardes' : 'Buenas noches';
   const abiertos = res.porEstado.slice(0, 5).reduce((a, b) => a + b, 0);
@@ -261,9 +261,15 @@ async function vInicio() {
       <span class="kv">Tipo <b>${esc(t.tipo)}</b></span>
       <span class="ft"><span>Creado ${fdate(t.creado)}</span>${t.doc ? `<span class="mono" style="color:var(--ink)">${t.doc.tipo === 'factura' ? 'F ' + esc(t.doc.numero || '') : 'Presup.'} · ${eur(t.doc.base)}</span>` : ''}</span>
     </a>`).join('');
+  const AGT = { visita: ['VISITA', '#CFE0EA', '#1E3A4F'], montaje: ['MONTAJE', '#2E4A4A', '#FFFFFF'], cobro: ['COBRAR', '#C9973F', '#1C2626'], seguimiento: ['SEGUIMIENTO', '#D6E6DC', '#1F4A36'] };
+  const diaTxt = (a) => { const d = new Date(a.inicio); const w = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'][a.todo_dia ? d.getUTCDay() : d.getDay()]; const f = a.todo_dia ? String(d.getUTCDate()).padStart(2, '0') + '/' + String(d.getUTCMonth() + 1).padStart(2, '0') : fdate(a.inicio).slice(0, 5); return `${w} ${f}${a.todo_dia ? '' : ' · ' + fdt(a.inicio).slice(11)}`; };
+  const agHtml = ag.slice(0, 8).map((a) => `<a class="doc" href="#/t/${a.trabajo_id}" style="text-decoration:none;color:var(--ink);flex-direction:column;align-items:flex-start;gap:4px">
+      <span style="display:flex;justify-content:space-between;width:100%;gap:8px;align-items:center"><span class="badge" style="background:${AGT[a.tipo][1]};color:${AGT[a.tipo][2]}">${AGT[a.tipo][0]}</span><b style="font-size:13px">${diaTxt(a)}</b></span>
+      <span style="font-size:14px">${esc(a.cliente)}</span></a>`).join('');
   app().innerHTML = shell('inicio', `
     <h1 style="text-align:center">${saludo}, Jose</h1>
     <div class="counters">${counters}</div>
+    ${agHtml ? `<section class="card pad" style="display:flex;flex-direction:column;gap:10px"><div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap"><h2>Próximos días</h2><span style="font-size:12px;color:var(--mut)">Visitas, montajes y recordatorios · también en tu Calendario</span></div><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px">${agHtml}</div></section>` : ''}
     <div role="tablist" class="tabs">${tabs}</div>
     <div class="tools">
       <label class="field" style="flex-direction:row;align-items:center;gap:8px">Tipo
@@ -286,7 +292,7 @@ async function vInicio() {
 // ── ficha del trabajo ───────────────────────────────────────────────────────
 async function vTrabajo(id) {
   app().innerHTML = shell('inicio', '<p class="empty">Cargando…</p>');
-  const t = await api('/trabajos/' + id);
+  const [t, calE] = await Promise.all([api('/trabajos/' + id), api('/calendario').catch(() => ({}))]);
   const dirObra = [t.direccion_obra || t.direccion, [t.cp_obra || t.cp, t.concello_obra || t.concello].filter(Boolean).join(' ')].filter(Boolean).join(', ');
   const done = '#2E4A4A', grey = '#C5CFCE';
   const steps = ESTADOS.map((l, i) => {
@@ -380,7 +386,7 @@ async function vTrabajo(id) {
       </div>
       <div class="r">
         <section class="card pad" style="display:flex;flex-direction:column;gap:12px">
-          <div style="display:flex;justify-content:space-between;align-items:baseline"><h2>Agenda</h2><span style="font-size:12px;color:var(--mut)">Calendario de iCloud: próximamente</span></div>
+          <div style="display:flex;justify-content:space-between;align-items:baseline"><h2>Agenda</h2><span style="font-size:12px;color:${calE.conectado ? 'var(--mut)' : 'var(--red)'}">${calE.conectado ? 'Se sincroniza con tu Calendario' : 'Calendario sin conectar'}</span></div>
           <label class="field">Visita<input type="datetime-local" data-f="visita_en" value="${isoDT(t.visita_en)}"></label>
           <label class="field">Presupuesto enviado<input type="date" data-f="presupuesto_enviado" value="${isoDate(t.presupuesto_enviado)}"></label>
           <label class="field">Montaje<input type="datetime-local" data-f="montaje_en" value="${isoDT(t.montaje_en)}"></label>
@@ -666,6 +672,11 @@ function vAjustes() {
       <p id="syncres" class="mono" style="margin:0;font-size:13px"></p>
     </section>
     <section class="card pad" style="display:flex;flex-direction:column;gap:10px">
+      <h2>Calendario de iCloud</h2>
+      <p id="calEst" style="margin:0;font-size:14px;line-height:1.5;color:var(--ink2)">Comprobando…</p>
+      <div><button class="btn" id="calSync">Sincronizar ahora</button></div>
+    </section>
+    <section class="card pad" style="display:flex;flex-direction:column;gap:10px">
       <h2>Exportar</h2>
       <div style="display:flex;flex-wrap:wrap;gap:8px">
         <a class="btn" href="${API}/export/clientes.csv?token=${encodeURIComponent(token())}">Clientes (Excel/CSV)</a>
@@ -684,6 +695,9 @@ function vAjustes() {
     try { const r = await api('/sync-fichero', { method: 'POST' }); $('#syncres').textContent = `${r.nuevosClientes} clientes nuevos · ${r.nuevasFacturas} facturas nuevas · total ${r.clientes} clientes, ${r.facturas} facturas, ${eur(r.base)}`; }
     catch (e) { $('#syncres').textContent = e.message; }
   };
+  const calPinta = (e) => { $('#calEst').innerHTML = e.conectado ? `Conectado al calendario <b>«${esc(e.calendario)}»</b>. Visitas, montajes, recordatorios de cobro (15 días tras la factura) y seguimiento de presupuestos (7 días tras enviarlo). Si mueves o borras un evento en el iPhone o el Mac, la ficha se actualiza en unos minutos.${e.ultimoPull ? ' Última lectura: ' + fdt(e.ultimoPull) + '.' : ''}` : `<span style="color:var(--red)">${esc(e.error || 'Sin conectar')}</span>`; };
+  api('/calendario').then(calPinta).catch(() => {});
+  $('#calSync').onclick = async () => { $('#calEst').textContent = 'Sincronizando…'; const r = await api('/calendario/sincronizar', { method: 'POST' }).catch((e) => ({ ok: false, error: e.message })); const e = await api('/calendario'); calPinta(e); toast(r.ok ? `Calendario al día (${r.trabajos} trabajos)` : (r.error || 'Error')); };
   $('#clave').onclick = async () => { const r = await api('/clave-mac', { method: 'POST' }); const ta = $('#claveTxt'); ta.style.display = 'block'; ta.value = r.token; ta.select(); };
   $('#out').onclick = () => { localStorage.removeItem('gf-token'); render(); };
 }
