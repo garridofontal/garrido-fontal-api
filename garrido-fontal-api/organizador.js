@@ -5,6 +5,7 @@ const crypto  = require('crypto');
 const fs      = require('fs');
 const path    = require('path');
 const { q, pool } = require('./db');
+const calendario = require('./calendario');
 const multer  = require('multer');
 const { Packer } = require('docx');
 const { buildPresuposto } = require('./builders/presuposto');
@@ -132,6 +133,7 @@ router.patch('/trabajos/:id', wrap(async (req, res) => {
   p.push(req.params.id);
   await q(`UPDATE trabajos SET ${sets.join(',')}, actualizado=now() WHERE id=$${p.length}`, p);
   if ('presupuesto_enviado' in b && b.presupuesto_enviado) await q(`INSERT INTO trabajo_eventos (trabajo_id,tipo,texto) VALUES ($1,'nota','Presupuesto enviado')`, [req.params.id]);
+  calendario.alCambiar(+req.params.id);
   res.json({ ok: true });
 }));
 
@@ -141,12 +143,14 @@ router.post('/trabajos/:id/estado', wrap(async (req, res) => {
   await q(`UPDATE trabajos SET estado=$1, cancelado_en=NULL, actualizado=now() WHERE id=$2`, [e, req.params.id]);
   await q(`INSERT INTO trabajo_eventos (trabajo_id,tipo,estado,texto) VALUES ($1,'estado',$2,$3)`, [req.params.id, e, 'Estado cambiado – ' + ESTADOS[e]]);
   if (e === 5) await q(`UPDATE documentos SET cobrada=true, cobrada_en=coalesce(cobrada_en,current_date) WHERE trabajo_id=$1 AND tipo='factura'`, [req.params.id]);
+  calendario.alCambiar(+req.params.id);
   res.json({ ok: true });
 }));
 
 router.post('/trabajos/:id/cancelar', wrap(async (req, res) => {
   await q(`UPDATE trabajos SET cancelado_en=now(), actualizado=now() WHERE id=$1`, [req.params.id]);
   await q(`INSERT INTO trabajo_eventos (trabajo_id,tipo,texto) VALUES ($1,'cancelado',$2)`, [req.params.id, 'Trabajo cancelado' + ((req.body || {}).motivo ? ': ' + req.body.motivo : '')]);
+  calendario.alCambiar(+req.params.id);
   res.json({ ok: true });
 }));
 
@@ -162,6 +166,7 @@ router.post('/trabajos/:id/documentos', wrap(async (req, res) => {
     if (ex.rows[0]) {
       await q(`UPDATE documentos SET trabajo_id=$1 WHERE id=$2`, [req.params.id, ex.rows[0].id]);
       await q(`INSERT INTO trabajo_eventos (trabajo_id,tipo,texto) VALUES ($1,'documento',$2)`, [req.params.id, `${cap(tipo)} ${numero} vinculada`]);
+      calendario.alCambiar(+req.params.id);
       return res.json({ ok: true, vinculado: true });
     }
   }
@@ -365,6 +370,7 @@ router.post('/trabajos/:id/generar', wrap(async (req, res) => {
     await q(`UPDATE trabajos SET estado=2, actualizado=now() WHERE id=$1`, [t.id]);
     await q(`INSERT INTO trabajo_eventos (trabajo_id,tipo,estado,texto) VALUES ($1,'estado',2,$2)`, [t.id, 'Estado cambiado – ' + ESTADOS[2]]);
   }
+  calendario.alCambiar(t.id);
   res.json({ ok: true, documento_id: d.rows[0].id, archivo_id: a.rows[0].id, numero, nombre });
 }));
 router.get('/documentos/:id', wrap(async (req, res) => {
@@ -377,6 +383,11 @@ router.post('/documentos/:id/cobrada', wrap(async (req, res) => {
   await q(`UPDATE documentos SET cobrada=$1, cobrada_en=CASE WHEN $1 THEN current_date ELSE NULL END WHERE id=$2`, [v, req.params.id]);
   res.json({ ok: true });
 }));
+
+// ── Calendario de iCloud ────────────────────────────────────────────────────
+router.get('/calendario', (_req, res) => res.json(calendario.estado()));
+router.post('/calendario/sincronizar', wrap(async (_req, res) => res.json(await calendario.sincronizarTodo())));
+router.get('/agenda', wrap(async (req, res) => res.json(await calendario.agenda(+req.query.dias || 21))));
 
 // ── Exportar ────────────────────────────────────────────────────────────────
 async function exportData() {

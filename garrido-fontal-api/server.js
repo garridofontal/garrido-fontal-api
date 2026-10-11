@@ -8,7 +8,8 @@ const { buildFactura }      = require('./builders/factura');
 const { readPresuposto }    = require('./builders/readPresuposto');
 const { migrate }          = require('./db');
 const organizador          = require('./organizador');
-// v2026-10-11 organizador de trabajos
+const calendario           = require('./calendario');
+// v2026-10-11b organizador de trabajos + calendario
 
 const app    = express();
 const PORT   = process.env.PORT || 3000;
@@ -103,5 +104,5 @@ app.post('/api/factura', async (req, res) => {
 
 app.listen(PORT, () => {
   console.log(`Garrido Fontal API → http://localhost:${PORT}`);
-  migrate().catch((e) => console.error('Organizador: erro creando a base de datos', e));
+  migrate().then(() => calendario.arrancar()).catch((e) => console.error('Organizador: erro creando a base de datos', e));
 });
