@@ -317,23 +317,18 @@ router.get('/trabajos/:id/siguientes', wrap(async (req, res) => {
   res.json({ factura: `${f.rows[0].n}-${yy}`, presupuesto: np.rows[0].n ? `${cod}-${np.rows[0].n + 1}` : cod });
 }));
 
-router.post('/trabajos/:id/generar', wrap(async (req, res) => {
-  const b = req.body || {};
-  const tipo = b.tipo === 'factura' ? 'factura' : 'presupuesto';
-  const tr = await q(`SELECT t.*, c.nombre cnome, c.cif cnif, c.direccion cdir, c.cp ccp_cp, c.concello cconcello FROM trabajos t JOIN clientes c ON c.id=t.cliente_id WHERE t.id=$1`, [req.params.id]);
-  const t = tr.rows[0];
-  if (!t) return res.status(404).json({ error: 'Non existe' });
+const TRABAJO_DOC_SQL = `SELECT t.*, c.nombre cnome, c.cif cnif, c.direccion cdir, c.cp ccp_cp, c.concello cconcello FROM trabajos t JOIN clientes c ON c.id=t.cliente_id WHERE t.id=$1`;
+class ErrorHttp extends Error { constructor(st, m) { super(m); this.st = st; } }
+// Monta el Word (mismo generador que el Xerador) a partir de los datos del formulario
+async function armarDocumento(t, b, tipo, numero) {
   const lineas = (b.lineas || []).filter((l) => String(l.concepto || '').trim()).map((l) => ({
     ud: String(l.ud || '1'), concepto: String(l.concepto), precio: num(l.precio), subtotal: num(l.subtotal) || num(l.precio) * (parseFloat(l.ud) || 1) }));
-  if (!lineas.length) return res.status(400).json({ error: 'Añade al menos una línea' });
+  if (!lineas.length) throw new ErrorHttp(400, 'Añade al menos una línea');
+  if (!numero) throw new ErrorHttp(400, 'Falta el número');
   const ivaPct = num(b.ivaPct === undefined ? 21 : b.ivaPct);
   const base = Math.round(lineas.reduce((a, l) => a + l.subtotal, 0) * 100) / 100;
   const ivaVal = Math.round(base * ivaPct) / 100;
   const total = Math.round((base + ivaVal) * 100) / 100;
-  const numero = normNumero(b.num || '');
-  if (!numero) return res.status(400).json({ error: 'Falta el número' });
-  const ex = await q(`SELECT id FROM documentos WHERE tipo=$1 AND numero=$2`, [tipo, numero]);
-  if (ex.rows[0]) return res.status(409).json({ error: `Ya existe ${tipo === 'factura' ? 'la factura' : 'el presupuesto'} ${numero}` });
   const payload = {
     num: tipo === 'factura' ? numero.replace('-', '/') : numero, fecha: b.fecha || new Date().toISOString().slice(0, 10),
     validez: b.validez || new Date(Date.now() + 90 * 864e5).toISOString().slice(0, 10),
@@ -353,11 +348,26 @@ router.post('/trabajos/:id/generar', wrap(async (req, res) => {
     if (payload.modalidadePago === 'dos' && !payload.pago1 && !payload.pago2) { const p1 = mat > 0 ? mat : total / 2; payload.pago1 = f2(p1); payload.pago2 = f2(total - p1); }
     if (payload.modalidadePago === 'tres' && !payload.pago1 && !payload.pago2 && !payload.pago3) { payload.pago1 = f2(mat > 0 ? mat : total / 3); const r = (total - payload.pago1) / 2; payload.pago2 = f2(r); payload.pago3 = f2(total - payload.pago1 - r); }
   }
-  const doc = tipo === 'factura' ? buildFactura(payload) : buildPresuposto(payload);
-  const buf = await Packer.toBuffer(doc);
+  const buf = await Packer.toBuffer(tipo === 'factura' ? buildFactura(payload) : buildPresuposto(payload));
   const nombre = `${tipo === 'factura' ? 'Factura' : 'Presupuesto'}_${numero}.docx`;
+  return { lineas, ivaPct, base, total, payload, buf, nombre };
+}
+const DOCX_MIME = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+const wrapDoc = (fn) => wrap(async (req, res) => { try { await fn(req, res); } catch (e) { if (e instanceof ErrorHttp) return res.status(e.st).json({ error: e.message }); throw e; } });
+
+router.post('/trabajos/:id/generar', wrapDoc(async (req, res) => {
+  const b = req.body || {};
+  const tipo = b.tipo === 'factura' ? 'factura' : 'presupuesto';
+  const t = (await q(TRABAJO_DOC_SQL, [req.params.id])).rows[0];
+  if (!t) return res.status(404).json({ error: 'Non existe' });
+  const numero = normNumero(b.num || '');
+  if (numero) {
+    const ex = await q(`SELECT id FROM documentos WHERE tipo=$1 AND numero=$2`, [tipo, numero]);
+    if (ex.rows[0]) return res.status(409).json({ error: `Ya existe ${tipo === 'factura' ? 'la factura' : 'el presupuesto'} ${numero}` });
+  }
+  const { lineas, ivaPct, base, total, payload, buf, nombre } = await armarDocumento(t, b, tipo, numero);
   const a = await q(`INSERT INTO archivos (trabajo_id,cliente_id,tipo,nombre,mime,tamano,datos) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id`,
-    [t.id, t.cliente_id, tipo, nombre, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', buf.length, buf]);
+    [t.id, t.cliente_id, tipo, nombre, DOCX_MIME, buf.length, buf]);
   const d = await q(`INSERT INTO documentos (tipo,numero,fecha,base,total,origen,cliente_id,trabajo_id,lineas,iva_pct,datos,archivo_id)
      VALUES ($1,$2,$3,$4,$5,'app',$6,$7,$8,$9,$10,$11) RETURNING id`,
     [tipo, numero, payload.fecha, base, total, t.cliente_id, t.id, JSON.stringify(lineas), ivaPct, JSON.stringify(payload), a.rows[0].id]);
@@ -372,6 +382,31 @@ router.post('/trabajos/:id/generar', wrap(async (req, res) => {
   }
   calendario.alCambiar(t.id);
   res.json({ ok: true, documento_id: d.rows[0].id, archivo_id: a.rows[0].id, numero, nombre });
+}));
+
+// Modificar un presupuesto o factura ya hecho: se rehace el Word con los datos nuevos
+router.put('/documentos/:id', wrapDoc(async (req, res) => {
+  const b = req.body || {};
+  const d0 = (await q(`SELECT * FROM documentos WHERE id=$1`, [req.params.id])).rows[0];
+  if (!d0) return res.status(404).json({ error: 'Non existe' });
+  if (!d0.trabajo_id) return res.status(400).json({ error: 'Este documento no está vinculado a un trabajo' });
+  const tipo = d0.tipo;
+  const t = (await q(TRABAJO_DOC_SQL, [d0.trabajo_id])).rows[0];
+  const numero = normNumero(b.num || d0.numero || '');
+  if (numero && numero !== d0.numero) {
+    const ex = await q(`SELECT id FROM documentos WHERE tipo=$1 AND numero=$2 AND id<>$3`, [tipo, numero, d0.id]);
+    if (ex.rows[0]) return res.status(409).json({ error: `Ya existe ${tipo === 'factura' ? 'la factura' : 'el presupuesto'} ${numero}` });
+  }
+  const { lineas, ivaPct, base, total, payload, buf, nombre } = await armarDocumento(t, b, tipo, numero);
+  // archivo nuevo (así la copia del Mac se actualiza) y se borra el anterior
+  const a = await q(`INSERT INTO archivos (trabajo_id,cliente_id,tipo,nombre,mime,tamano,datos) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id`,
+    [t.id, t.cliente_id, tipo, nombre, DOCX_MIME, buf.length, buf]);
+  await q(`UPDATE documentos SET numero=$1, fecha=$2, base=$3, total=$4, lineas=$5, iva_pct=$6, datos=$7, archivo_id=$8, origen='app' WHERE id=$9`,
+    [numero, payload.fecha, base, total, JSON.stringify(lineas), ivaPct, JSON.stringify(payload), a.rows[0].id, d0.id]);
+  if (d0.archivo_id) await q(`DELETE FROM archivos WHERE id=$1`, [d0.archivo_id]);
+  await q(`INSERT INTO trabajo_eventos (trabajo_id,tipo,texto) VALUES ($1,'documento',$2)`, [t.id, `${cap(tipo)} ${numero} modificad${tipo === 'factura' ? 'a' : 'o'} (${base.toFixed(2).replace('.', ',')} € base)`]);
+  calendario.alCambiar(t.id);
+  res.json({ ok: true, documento_id: d0.id, archivo_id: a.rows[0].id, numero, nombre });
 }));
 router.get('/documentos/:id', wrap(async (req, res) => {
   const r = await q(`SELECT * FROM documentos WHERE id=$1`, [req.params.id]);
