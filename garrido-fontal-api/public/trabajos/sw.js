@@ -1,5 +1,5 @@
 // Service worker de Trabajos — Garrido Fontal SLU
-const VERSION = 'trabajos-v3';
+const VERSION = 'trabajos-v4';
 const ARCHIVOS = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './apple-touch-icon.png', './favicon.png'];
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(VERSION).then((c) => c.addAll(ARCHIVOS)).then(() => self.skipWaiting()));
