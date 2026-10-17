@@ -149,6 +149,14 @@ function buildFooter() {
         font: 'Arial', size: 16, color: C.GRAY_TEXT,
       })],
     }),
+    new Paragraph({
+      alignment: AlignmentType.CENTER,
+      spacing:   { before: 40, after: 0 },
+      children: [new TextRun({
+        text: 'Protección de datos: Garrido Fontal SLU (B27203520) trata sus datos para elaborar el presupuesto, prestar el servicio y facturarlo (RGPD y LOPDGDD), y los conserva durante los plazos legales. Puede ejercer sus derechos de acceso, rectificación, supresión y demás escribiendo a garridofontalslu@gmail.com.',
+        font: 'Arial', size: 13, color: C.GRAY_TEXT,
+      })],
+    }),
   ]});
 }
 
