@@ -9,7 +9,8 @@ const { readPresuposto }    = require('./builders/readPresuposto');
 const { migrate }          = require('./db');
 const organizador          = require('./organizador');
 const calendario           = require('./calendario');
-// v2026-10-11b organizador de trabajos + calendario
+const xerador              = require('./xerador');
+// v2026-10-17 organizador + calendario + xerador (PIN, clientes, archivo, backup)
 
 const app    = express();
 const PORT   = process.env.PORT || 3000;
@@ -17,6 +18,8 @@ const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 
 
 app.use(cors());
 app.use(express.json({ limit: '2mb' }));
+app.use(xerador.gate);           // PIN para el Xerador, /clientes y /api/clientes
+app.use('/api', xerador.router); // /api/clientes · /api/xerador/*
 app.use(express.static(path.join(__dirname, 'public')));
 
 // ── Organizador de trabajos (API) ─────────────────────────────────────────────
@@ -104,5 +107,5 @@ app.post('/api/factura', async (req, res) => {
 
 app.listen(PORT, () => {
   console.log(`Garrido Fontal API → http://localhost:${PORT}`);
-  migrate().then(() => calendario.arrancar()).catch((e) => console.error('Organizador: erro creando a base de datos', e));
+  migrate().then(() => xerador.init()).then(() => calendario.arrancar()).catch((e) => console.error('Organizador: erro creando a base de datos', e));
 });
