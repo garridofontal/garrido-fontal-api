@@ -107,6 +107,13 @@ dl.kv .full{grid-column:1/-1}
 .lin textarea{height:auto;min-height:42px}
 .tot{display:flex;flex-direction:column;align-items:flex-end;gap:4px;font-size:15px}
 @media (max-width:720px){.lin{grid-template-columns:minmax(0,1fr) minmax(0,1fr) 40px;padding-bottom:10px;border-bottom:1px solid var(--line)}.lin .cc{grid-column:1/-1}}
+.chips{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+.chip{height:40px;padding:0 14px;border-radius:999px;border:1px solid var(--line2);background:var(--card);display:inline-flex;align-items:center;gap:7px;font-size:14px;font-weight:600;color:var(--ink2);white-space:nowrap}
+.chip.on{background:var(--brand);border-color:var(--brand);color:#fff}
+.chip i,.tdot i{width:9px;height:9px;border-radius:50%;display:inline-block;flex:none}
+.chip b{font-weight:700;opacity:.85}
+.tdots{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;min-height:15px;font-size:12px;color:var(--ink2)}
+.tdot{display:inline-flex;align-items:center;gap:3px}
 .toast{position:fixed;left:50%;bottom:calc(100px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:#fff;padding:12px 18px;border-radius:10px;font-size:14px;z-index:20;max-width:90vw}
 nav.bottom{display:none}
 .login{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
@@ -119,7 +126,8 @@ nav.bottom{display:none}
   nav.bottom a{height:58px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:11px;color:var(--mut);text-decoration:none}
   nav.bottom a.on{color:var(--brand);font-weight:700}
   .counters{display:flex;overflow-x:auto;margin:0 -14px;padding:0 14px}
-  .counter{flex:none;width:112px}
+  .counter{flex:none;width:128px}
+  .chips{flex-wrap:nowrap;justify-content:flex-start;overflow-x:auto;margin:0 -14px;padding:0 14px 2px}
   .grid{grid-template-columns:1fr}
   .stepper .lb{display:none}
   .form{grid-template-columns:1fr}
@@ -134,11 +142,13 @@ nav.bottom{display:none}
 <script>
 'use strict';
 const API = '/api/org';
-const ESTADOS = ['Contacto', 'Pendiente de ver', 'Pendiente de presupuesto', 'Pendiente de hacer', 'Pendiente de cobrar', 'Terminado'];
-const CORTO = ['Contacto', 'Por ver', 'Presupuesto', 'Por hacer', 'Por cobrar', 'Terminado'];
-const BADGE = [['CONTACTO', '#DCE3E2', '#1C2626'], ['POR VER', '#CFE0EA', '#1E3A4F'], ['POR PRESUPUESTAR', '#D6E6DC', '#1F4A36'], ['POR HACER', '#2E4A4A', '#FFFFFF'], ['POR COBRAR', '#C9973F', '#1C2626'], ['TERMINADO', '#2F6B45', '#FFFFFF']];
-const SIGUIENTE = ['Llamar o escribir al cliente y quedar para ver el trabajo.', 'Visitar la obra, medir y hacer fotos.', 'Preparar y enviar el presupuesto.', 'Cobrar el material por adelantado y programar el montaje.', 'Reclamar el pago de la factura.', 'Trabajo completado y cobrado.'];
-const TIPOS = ['Velux', 'Cubierta', 'Gotera', 'Otro'];
+const ESTADOS = ['Contacto', 'Visita', 'Presupuesto', 'Contrato', 'Instalación', 'Cobro'];
+const CORTO = ESTADOS;
+const BADGE = [['CONTACTO', '#DCE3E2', '#1C2626'], ['VISITA', '#CFE0EA', '#1E3A4F'], ['PRESUPUESTO', '#D6E6DC', '#1F4A36'], ['CONTRATO', '#E6DCEF', '#3D2A57'], ['INSTALACIÓN', '#2E4A4A', '#FFFFFF'], ['COBRO', '#C9973F', '#1C2626']];
+const BADGE_COBRADO = ['COBRADO', '#2F6B45', '#FFFFFF'];
+const SIGUIENTE = ['Llamar o escribir al cliente y quedar para la visita.', 'Visitar la obra, medir y hacer fotos.', 'Preparar y enviar el presupuesto.', 'Presupuesto aceptado: cobrar el material por adelantado, pedirlo y fijar la fecha de instalación.', 'Hacer la instalación y, al terminar, emitir la factura.', 'Factura emitida: comprobar el cobro y marcarlo como cobrado.'];
+const TIPOS = ['Velux', 'Mantenimiento', 'Accesorios', 'Reparación'];
+const TIPO_COL = { Velux: ['#E3ECEC', '#2E4A4A', '#2E4A4A'], Mantenimiento: ['#F1E6CF', '#6B4E12', '#B8862F'], Accesorios: ['#F0E1EA', '#6B2F4F', '#A24C7E'], Reparación: ['#E1E6F3', '#2F3F7A', '#4A5FA8'] };
 const ORIGENES = ['WhatsApp', 'Teléfono', 'Google', 'Velux Pro', 'Distribuidor', 'Administrador', 'Vecino', 'Cliente anterior', 'Otro'];
 const S = { tab: 'open', estado: '', tipo: 'Todos', orden: 'recent', q: '' };
 
@@ -150,7 +160,8 @@ function fdate(s) { if (!s) return ''; const d = new Date(s); return String(d.ge
 function fdt(s) { if (!s) return ''; const d = new Date(s); return fdate(s) + ' ' + String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); }
 function isoDate(s) { if (!s) return ''; const d = new Date(s); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
 function isoDT(s) { if (!s) return ''; const d = new Date(s); return isoDate(s) + 'T' + String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); }
-function badge(t) { const b = t.cancelado_en ? ['CANCELADO', '#F0DEDA', '#7A2E20'] : BADGE[t.estado]; return `<span class="badge" style="background:${b[1]};color:${b[2]}">${b[0]}</span>`; }
+function badge(t) { const b = t.cancelado_en ? ['CANCELADO', '#F0DEDA', '#7A2E20'] : t.cerrado_en ? BADGE_COBRADO : BADGE[t.estado]; return `<span class="badge" style="background:${b[1]};color:${b[2]}">${b[0]}</span>`; }
+function tipoChip(tipo) { const c = TIPO_COL[tipo] || ['#E3E8E7', '#3A4848', '#5A6B6B']; return `<span class="badge" style="background:${c[0]};color:${c[1]}">${esc(tipo)}</span>`; }
 function toast(m) { const d = document.createElement('div'); d.className = 'toast'; d.textContent = m; document.body.appendChild(d); setTimeout(() => d.remove(), 2600); }
 function telLimpio(t) { return String(t || '').replace(/[^0-9+]/g, ''); }
 function wa(t) { let n = telLimpio(t).replace(/^\+/, ''); if (n.length === 9) n = '34' + n; return 'https://wa.me/' + n; }
@@ -176,6 +187,7 @@ async function api(path, opts = {}) {
 }
 
 const fileURL = (id, extra = '') => `${API}/archivos/${id}?token=${encodeURIComponent(token())}${extra}`;
+function descargar(id, nombre) { const a = document.createElement('a'); a.href = fileURL(id, '&descargar=1'); a.download = nombre || ''; document.body.appendChild(a); a.click(); a.remove(); }
 function reducir(file, max, calidad) {
   return new Promise((ok, ko) => {
     const url = URL.createObjectURL(file); const img = new Image();
@@ -245,35 +257,37 @@ function vLogin() {
 async function vInicio() {
   app().innerHTML = shell('inicio', '<p class="empty">Cargando…</p>');
   const params = new URLSearchParams({ tab: S.tab, estado: S.estado, tipo: S.tipo, orden: S.orden, q: S.q });
-  const [res, lista, ag] = await Promise.all([api('/resumen'), api('/trabajos?' + params), api('/agenda').catch(() => [])]);
+  const [res, lista, ag] = await Promise.all([api('/resumen?tipo=' + encodeURIComponent(S.tipo)), api('/trabajos?' + params), api('/agenda').catch(() => [])]);
   const h = new Date().getHours();
   const saludo = h < 14 ? 'Buenos días' : h < 21 ? 'Buenas tardes' : 'Buenas noches';
-  const abiertos = res.porEstado.slice(0, 5).reduce((a, b) => a + b, 0);
-  const counters = res.porEstado.slice(0, 5).map((n, i) => `<button class="counter ${S.estado === String(i) ? 'on' : ''}" data-est="${i}">
-      <span class="l">${CORTO[i]}</span><span class="n">${n}</span><span class="x mono">${i === 4 ? eur(res.porCobrar) : ''}</span></button>`).join('');
-  const tabs = [['open', 'Abiertos', abiertos], ['done', 'Cerrados', res.porEstado[5]], ['cancel', 'Cancelados', res.cancelados]]
+  const abiertos = res.porEstado.reduce((a, b) => a + b, 0);
+  const totalAbiertos = Object.values(res.porTipo).reduce((a, b) => a + b, 0);
+  const dots = (i) => TIPOS.map((t) => (res.porEstadoTipo[i][t] ? `<span class="tdot" title="${t}"><i style="background:${TIPO_COL[t][2]}"></i>${res.porEstadoTipo[i][t]}</span>` : '')).join('');
+  const counters = res.porEstado.map((n, i) => `<button class="counter ${S.estado === String(i) ? 'on' : ''}" data-est="${i}">
+      <span class="l">${CORTO[i]}</span><span class="n">${n}</span><span class="x mono">${i === 5 ? eur(res.porCobrar) : ''}</span><span class="tdots">${S.tipo === 'Todos' ? dots(i) : ''}</span></button>`).join('');
+  const chips = ['Todos'].concat(TIPOS).map((x) => `<button class="chip ${S.tipo === x ? 'on' : ''}" data-tipo="${x}">${x === 'Todos' ? '' : `<i style="background:${TIPO_COL[x][2]}"></i>`}${x} <b>${x === 'Todos' ? totalAbiertos : (res.porTipo[x] || 0)}</b></button>`).join('');
+  const tabs = [['open', 'Abiertos', abiertos], ['done', 'Cerrados', res.cerrados], ['cancel', 'Cancelados', res.cancelados]]
     .map(([k, l, n]) => `<button role="tab" class="${S.tab === k ? 'on' : ''}" data-tab="${k}">${l} · ${n}</button>`).join('');
   const cards = lista.map((t) => `<a class="jc" href="#/t/${t.id}">
       <span class="t"><span class="nm">${esc(t.cliente)}</span>${badge(t)}</span>
       <span class="sub">${esc(t.codigo)}${t.origen ? ' · ' + esc(t.origen) : ''}</span>
       <span class="sp"></span>
       <span class="kv">Domicilio <b>${esc(t.concello_obra || t.concello || '—')}</b></span>
-      <span class="kv">Tipo <b>${esc(t.tipo)}</b></span>
+      <span class="kv">Tipo ${tipoChip(t.tipo)}</span>
       <span class="ft"><span>Creado ${fdate(t.creado)}</span>${t.doc ? `<span class="mono" style="color:var(--ink)">${t.doc.tipo === 'factura' ? 'F ' + esc(t.doc.numero || '') : 'Presup.'} · ${eur(t.doc.base)}</span>` : ''}</span>
     </a>`).join('');
-  const AGT = { visita: ['VISITA', '#CFE0EA', '#1E3A4F'], montaje: ['MONTAJE', '#2E4A4A', '#FFFFFF'], cobro: ['COBRAR', '#C9973F', '#1C2626'], seguimiento: ['SEGUIMIENTO', '#D6E6DC', '#1F4A36'] };
+  const AGT = { visita: ['VISITA', '#CFE0EA', '#1E3A4F'], montaje: ['INSTALACIÓN', '#2E4A4A', '#FFFFFF'], cobro: ['COBRAR', '#C9973F', '#1C2626'], seguimiento: ['SEGUIMIENTO', '#D6E6DC', '#1F4A36'] };
   const diaTxt = (a) => { const d = new Date(a.inicio); const w = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'][a.todo_dia ? d.getUTCDay() : d.getDay()]; const f = a.todo_dia ? String(d.getUTCDate()).padStart(2, '0') + '/' + String(d.getUTCMonth() + 1).padStart(2, '0') : fdate(a.inicio).slice(0, 5); return `${w} ${f}${a.todo_dia ? '' : ' · ' + fdt(a.inicio).slice(11)}`; };
   const agHtml = ag.slice(0, 8).map((a) => `<a class="doc" href="#/t/${a.trabajo_id}" style="text-decoration:none;color:var(--ink);flex-direction:column;align-items:flex-start;gap:4px">
       <span style="display:flex;justify-content:space-between;width:100%;gap:8px;align-items:center"><span class="badge" style="background:${AGT[a.tipo][1]};color:${AGT[a.tipo][2]}">${AGT[a.tipo][0]}</span><b style="font-size:13px">${diaTxt(a)}</b></span>
       <span style="font-size:14px">${esc(a.cliente)}</span></a>`).join('');
   app().innerHTML = shell('inicio', `
     <h1 style="text-align:center">${saludo}, Jose</h1>
+    <div class="chips" role="group" aria-label="Tipo de trabajo">${chips}</div>
     <div class="counters">${counters}</div>
-    ${agHtml ? `<section class="card pad" style="display:flex;flex-direction:column;gap:10px"><div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap"><h2>Próximos días</h2><span style="font-size:12px;color:var(--mut)">Visitas, montajes y recordatorios · también en tu Calendario</span></div><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px">${agHtml}</div></section>` : ''}
+    ${agHtml ? `<section class="card pad" style="display:flex;flex-direction:column;gap:10px"><div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap"><h2>Próximos días</h2><span style="font-size:12px;color:var(--mut)">Visitas, instalaciones y recordatorios · también en tu Calendario</span></div><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px">${agHtml}</div></section>` : ''}
     <div role="tablist" class="tabs">${tabs}</div>
     <div class="tools">
-      <label class="field" style="flex-direction:row;align-items:center;gap:8px">Tipo
-        <select id="ftipo">${['Todos'].concat(TIPOS).map((x) => `<option ${S.tipo === x ? 'selected' : ''}>${x}</option>`).join('')}</select></label>
       ${S.estado !== '' ? `<button class="btn sm" id="clr" style="border-radius:999px">${ESTADOS[+S.estado]} ✕</button>` : ''}
       <span class="grow"></span>
       <label class="field hide-m" style="flex-direction:row;align-items:center;gap:8px">Ordenar
@@ -283,7 +297,7 @@ async function vInicio() {
     ${cards ? `<div class="grid">${cards}</div>` : `<p class="empty">No hay trabajos aquí todavía. <a href="#/nuevo">Crear el primero</a></p>`}`);
   document.querySelectorAll('[data-est]').forEach((b) => b.onclick = () => { S.estado = S.estado === b.dataset.est ? '' : b.dataset.est; S.tab = 'open'; vInicio(); });
   document.querySelectorAll('[data-tab]').forEach((b) => b.onclick = () => { S.tab = b.dataset.tab; S.estado = ''; vInicio(); });
-  $('#ftipo').onchange = (e) => { S.tipo = e.target.value; vInicio(); };
+  document.querySelectorAll('[data-tipo]').forEach((b) => b.onclick = () => { S.tipo = b.dataset.tipo; vInicio(); });
   const ford = $('#ford'); if (ford) ford.onchange = (e) => { S.orden = e.target.value; vInicio(); };
   const clr = $('#clr'); if (clr) clr.onclick = () => { S.estado = ''; vInicio(); };
   let tmo; $('#fq').oninput = (e) => { clearTimeout(tmo); tmo = setTimeout(() => { S.q = e.target.value; vInicio().then(() => { const i = $('#fq'); i.focus(); i.setSelectionRange(i.value.length, i.value.length); }); }, 350); };
@@ -296,7 +310,7 @@ async function vTrabajo(id) {
   const dirObra = [t.direccion_obra || t.direccion, [t.cp_obra || t.cp, t.concello_obra || t.concello].filter(Boolean).join(' ')].filter(Boolean).join(', ');
   const done = '#2E4A4A', grey = '#C5CFCE';
   const steps = ESTADOS.map((l, i) => {
-    const hecho = i < t.estado || t.estado === 5;
+    const hecho = i < t.estado || (t.estado === 5 && !!t.cerrado_en);
     return `<button class="step" data-set="${i}" aria-label="Poner en ${l}">
       <span class="row"><span class="ln" style="background:${i === 0 ? 'transparent' : (i <= t.estado ? done : grey)}"></span>
       <span class="dot" style="background:${hecho ? done : (i === t.estado ? '#C9973F' : '#fff')};border-color:${i <= t.estado ? done : grey}">${hecho ? ICON.check : ''}</span>
@@ -304,8 +318,9 @@ async function vTrabajo(id) {
       <span class="lb" style="font-weight:${i === t.estado ? 700 : 500};color:${i > t.estado ? 'var(--mut)' : 'var(--ink)'}">${l}</span></button>`;
   }).join('');
   const cancel = !!t.cancelado_en;
+  const cerrado = !!t.cerrado_en;
   const fotos = (t.archivos || []).filter((a) => a.tipo === 'foto');
-  const usados = new Set(t.documentos.map((d) => d.archivo_id).filter(Boolean));
+  const usados = new Set(t.documentos.flatMap((d) => [d.archivo_id, d.pdf_id]).filter(Boolean));
   const otros = (t.archivos || []).filter((a) => a.tipo !== 'foto' && !usados.has(a.id));
   const docs = t.documentos.map((d) => `<div class="doc" style="flex-wrap:wrap">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2E4A4A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M8 14h8M8 17h5"/></svg>
@@ -313,6 +328,7 @@ async function vTrabajo(id) {
       <span class="mono" style="font-size:13px">${eur(d.base)}</span>
       <span style="display:flex;gap:6px;flex-wrap:wrap">
         ${d.archivo_id ? `<a class="btn sm" href="${fileURL(d.archivo_id, '&descargar=1')}">Word</a>` : ''}
+        ${d.pdf_id ? `<a class="btn sm" href="${fileURL(d.pdf_id, '&descargar=1')}">PDF</a>` : (d.archivo_id ? `<button class="btn sm" data-pdf="${d.archivo_id}">Crear PDF</button>` : '')}
         ${(d.lineas || []).length ? `<a class="btn sm" href="#/t/${t.id}/doc/editar/${d.id}">Editar</a>` : ''}
         ${d.tipo === 'presupuesto' && !t.presupuesto_enviado ? `<button class="btn sm" data-enviado="1">Marcar enviado</button>` : ''}
         ${d.tipo === 'presupuesto' && (d.lineas || []).length ? `<a class="btn sm pri" href="#/t/${t.id}/doc/factura/${d.id}">Convertir en factura</a>` : ''}
@@ -327,7 +343,7 @@ async function vTrabajo(id) {
     </div>
     <section class="card pad" style="display:flex;flex-direction:column;gap:6px">
       <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap"><h1>${esc(t.cliente)}</h1>${badge(t)}</div>
-      <span style="color:var(--ink2)">${esc(t.codigo)} · ${esc(t.tipo)} · ${esc([t.cp_obra || t.cp, t.concello_obra || t.concello].filter(Boolean).join(' '))}</span>
+      <span style="color:var(--ink2)">${esc(t.codigo)} · ${tipoChip(t.tipo)} · ${esc([t.cp_obra || t.cp, t.concello_obra || t.concello].filter(Boolean).join(' '))}</span>
       <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:6px">
         ${t.telefono ? `<a class="btn pri" href="${wa(t.telefono)}" target="_blank" rel="noopener">WhatsApp</a><a class="btn" href="tel:${telLimpio(t.telefono)}">Llamar</a>` : ''}
         ${dirObra ? `<a class="btn" href="${maps(dirObra)}" target="_blank" rel="noopener">Cómo llegar</a>` : ''}
@@ -338,12 +354,15 @@ async function vTrabajo(id) {
       <div class="l">
         <section class="card pad" style="display:flex;flex-direction:column;gap:12px">
           <h3>Siguiente paso</h3>
-          <p style="margin:0;font-size:15px;line-height:1.45">${cancel ? 'Trabajo cancelado el ' + fdate(t.cancelado_en) + '.' : SIGUIENTE[t.estado]}</p>
+          <p style="margin:0;font-size:15px;line-height:1.45">${cancel ? 'Trabajo cancelado el ' + fdate(t.cancelado_en) + '.' : cerrado ? 'Cobrado y cerrado el ' + fdate(t.cerrado_en) + '.' : SIGUIENTE[t.estado]}</p>
           <div style="display:flex;flex-wrap:wrap;gap:8px">
-            ${!cancel && t.estado < 5 ? `<button class="btn acc" id="adv">Pasar a «${ESTADOS[t.estado + 1]}»</button>` : ''}
-            ${!cancel && t.estado === 2 ? `<a class="btn" href="../">Crear presupuesto en el Xerador</a>` : ''}
-            ${!cancel && t.estado < 5 ? `<button class="btn danger" id="can">Cancelar trabajo</button>` : ''}
+            ${!cancel && !cerrado && t.estado < 5 ? `<button class="btn acc" id="adv">Pasar a «${ESTADOS[t.estado + 1]}»</button>` : ''}
+            ${!cancel && !cerrado && t.estado === 5 ? `<button class="btn acc" id="cobrado">Marcar como cobrado</button>` : ''}
+            ${!cancel && !cerrado && t.estado === 2 ? `<a class="btn" href="#/t/${t.id}/doc/presupuesto">Crear presupuesto</a>` : ''}
+            ${!cancel && !cerrado && (t.estado === 3 || t.estado === 4) ? `<a class="btn" href="#/t/${t.id}/doc/factura">Crear factura</a>` : ''}
+            ${!cancel && !cerrado ? `<button class="btn danger" id="can">Cancelar trabajo</button>` : ''}
             ${cancel ? `<button class="btn" id="react">Reactivar</button>` : ''}
+            ${cerrado ? `<button class="btn" id="reabrir">Reabrir</button>` : ''}
           </div>
         </section>
         <section class="card">
@@ -366,7 +385,7 @@ async function vTrabajo(id) {
               <label class="btn">Subir Word de presupuesto<input type="file" accept=".docx,.pdf" class="sr" data-up="presupuesto"></label>
               <label class="btn">Subir Word de factura<input type="file" accept=".docx,.pdf" class="sr" data-up="factura"></label>
             </div>
-            ${otros.length ? `<div style="display:flex;flex-direction:column;gap:6px">${otros.map((a) => `<div class="doc"><span class="i"><b style="font-size:14px">${esc(a.nombre)}</b><span style="font-size:12px;color:var(--mut)">${fdate(a.creado)} · ${Math.round(a.tamano / 1024)} KB</span></span><a class="btn sm" href="${fileURL(a.id, '&descargar=1')}">Descargar</a><button class="btn sm ghost" data-delfile="${a.id}" aria-label="Borrar archivo">✕</button></div>`).join('')}</div>` : ''}
+            ${otros.length ? `<div style="display:flex;flex-direction:column;gap:6px">${otros.map((a) => `<div class="doc"><span class="i"><b style="font-size:14px">${esc(a.nombre)}</b><span style="font-size:12px;color:var(--mut)">${fdate(a.creado)} · ${Math.round(a.tamano / 1024)} KB</span></span><a class="btn sm" href="${fileURL(a.id, '&descargar=1')}">Descargar</a>${/\.docx$/i.test(a.nombre) ? `<button class="btn sm" data-pdf="${a.id}">Crear PDF</button>` : ''}<button class="btn sm ghost" data-delfile="${a.id}" aria-label="Borrar archivo">✕</button></div>`).join('')}</div>` : ''}
             <details><summary style="cursor:pointer;font-size:14px;color:var(--brand);font-weight:600;padding:4px 0">Vincular una factura ya hecha con el Word (por número)</summary>
             <form id="fdoc" class="tools" style="padding-top:10px">
               <select id="dtipo" aria-label="Tipo"><option value="factura">Factura</option><option value="presupuesto">Presupuesto</option></select>
@@ -390,7 +409,7 @@ async function vTrabajo(id) {
           <div style="display:flex;justify-content:space-between;align-items:baseline"><h2>Agenda</h2><span style="font-size:12px;color:${calE.conectado ? 'var(--mut)' : 'var(--red)'}">${calE.conectado ? 'Se sincroniza con tu Calendario' : 'Calendario sin conectar'}</span></div>
           <label class="field">Visita<input type="datetime-local" data-f="visita_en" value="${isoDT(t.visita_en)}"></label>
           <label class="field">Presupuesto enviado<input type="date" data-f="presupuesto_enviado" value="${isoDate(t.presupuesto_enviado)}"></label>
-          <label class="field">Montaje<input type="datetime-local" data-f="montaje_en" value="${isoDT(t.montaje_en)}"></label>
+          <label class="field">Instalación<input type="datetime-local" data-f="montaje_en" value="${isoDT(t.montaje_en)}"></label>
         </section>
         <section class="card pad" style="display:flex;flex-direction:column;gap:14px">
           <div style="display:flex;justify-content:space-between;align-items:center"><h2>Cliente</h2><a href="#/c/${t.cliente_id}" style="font-size:14px">Ver ficha</a></div>
@@ -453,6 +472,13 @@ async function vTrabajo(id) {
     if (tipo === 'factura') { const n = prompt('Número de la factura (p.ej. 134-26):', (f.name.match(/(\d+)[-_ ](\d{2})/) || []).slice(1).join('-')); if (n === null) return; extra.numero = n; }
     try { await subir(id, [f], tipo, extra); toast('Documento guardado'); reload(); } catch (er) { toast(er.message); }
   });
+  document.querySelectorAll('[data-pdf]').forEach((b) => b.onclick = async () => {
+    b.disabled = true; b.textContent = 'Creando PDF…';
+    try { const r = await api(`/archivos/${b.dataset.pdf}/pdf`, { method: 'POST' }); descargar(r.archivo_id, r.nombre); toast('PDF listo'); reload(); }
+    catch (er) { toast(er.message); b.disabled = false; b.textContent = 'Crear PDF'; }
+  });
+  const cob = $('#cobrado'); if (cob) cob.onclick = async () => { await api(`/trabajos/${id}/cobrado`, { method: 'POST' }); toast('Cobrado: trabajo cerrado'); reload(); };
+  const rea = $('#reabrir'); if (rea) rea.onclick = async () => { await api(`/trabajos/${id}/reabrir`, { method: 'POST' }); reload(); };
   document.querySelectorAll('[data-delfile]').forEach((b) => b.onclick = async () => { if (!confirm('¿Borrar este archivo de la app?')) return; await api('/archivos/' + b.dataset.delfile, { method: 'DELETE' }); reload(); });
   document.querySelectorAll('[data-enviado]').forEach((b) => b.onclick = async () => { await api('/trabajos/' + id, { method: 'PATCH', body: { presupuesto_enviado: isoDate(new Date()) } }); toast('Presupuesto marcado como enviado'); reload(); });
 }
@@ -465,7 +491,14 @@ async function vDoc(id, tipo, desdeId, editId) {
   const esF = tipo === 'factura';
   let lineas = desde && desde.lineas && desde.lineas.length ? desde.lineas.map((l) => ({ ...l })) : [{ ud: '1', concepto: '', precio: '', subtotal: '' }];
   const datos = (desde && desde.datos) || {};
-  const PRESETS = ['Material VELUX (provisión de fondos)\nModelo y medida: ', 'Instalación de ventana VELUX\nRetirada de la ventana antigua, colocación y remates exteriores', 'Persiana VELUX\nModelo: ', 'Reparación de cubierta de pizarra\n', 'Reparación de gotera\n'];
+  const pagoSel = datos.modalidadePago || ((t.tipo === 'Mantenimiento' || t.tipo === 'Reparación') ? 'unico' : 'dos');
+  const PRESETS_TIPO = {
+    Velux: ['Material VELUX (provisión de fondos)\nModelo y medida: ', 'Instalación de ventana VELUX\nRetirada de la ventana antigua, colocación y remates exteriores', 'Persiana VELUX\nModelo: '],
+    Accesorios: ['Material VELUX (provisión de fondos)\nModelo: ', 'Instalación de persiana o cortina VELUX', 'Persiana VELUX\nModelo: '],
+    Mantenimiento: ['Revisión y limpieza de cubierta\n', 'Sustitución de pizarras\n', 'Mano de obra\n'],
+    'Reparación': ['Reparación de gotera\n', 'Reparación de cubierta de pizarra\n', 'Material\n', 'Mano de obra\n'],
+  };
+  const PRESETS = PRESETS_TIPO[t.tipo] || PRESETS_TIPO.Velux;
   const ccp = [t.cp_obra || t.cp, t.concello_obra || t.concello].filter(Boolean).join(' ');
   app().innerHTML = shell('inicio', `
     <div><a class="btn" href="#/t/${id}">${ICON.back}${esc(t.codigo)}</a></div>
@@ -498,12 +531,14 @@ async function vDoc(id, tipo, desdeId, editId) {
       <div class="tot" id="tot"></div>
     </section>
     ${esF ? '' : `<section class="card pad"><div class="form">
-      <label class="field">Forma de pago<select id="d_pago"><option value="unico" ${datos.modalidadePago === 'unico' ? 'selected' : ''}>Pago único al finalizar</option><option value="dos" ${!datos.modalidadePago || datos.modalidadePago === 'dos' ? 'selected' : ''}>Dos pagos (material + mano de obra)</option><option value="tres" ${datos.modalidadePago === 'tres' ? 'selected' : ''}>Tres pagos</option></select></label>
+      <label class="field">Forma de pago<select id="d_pago"><option value="unico" ${pagoSel === 'unico' ? 'selected' : ''}>Pago único al finalizar</option><option value="dos" ${pagoSel === 'dos' ? 'selected' : ''}>Dos pagos (material + mano de obra)</option><option value="tres" ${pagoSel === 'tres' ? 'selected' : ''}>Tres pagos</option></select></label>
       <label class="field">1º pago / único (€)<input id="d_p1" type="text" inputmode="decimal" placeholder="Automático"></label>
       <label class="field">2º pago (€)<input id="d_p2" type="text" inputmode="decimal" placeholder="Automático"></label>
       <label class="field">3º pago (€)<input id="d_p3" type="text" inputmode="decimal" placeholder="Solo con tres pagos"></label>
     </div></section>`}
     <section class="card pad"><label class="field">Notas<textarea id="d_notas" rows="3">${esc(datos.notas || '')}</textarea></label></section>
+    <section class="card pad" style="display:flex;flex-direction:column;gap:6px"><label class="field">Al guardar, descargar<select id="d_salida"><option value="ambos">Word y PDF</option><option value="word">Solo Word</option><option value="pdf">Solo PDF</option></select></label>
+      <span style="font-size:12px;color:var(--mut)">El Word siempre se guarda para poder editarlo. Si eliges «Solo Word», el PDF se puede crear después desde la ficha.</span></section>
     <div style="display:flex;justify-content:flex-end;gap:8px"><a class="btn" href="#/t/${id}">Cancelar</a><button class="btn acc" id="gen" style="height:50px;padding:0 22px">${edit ? 'Guardar cambios' : 'Generar ' + (esF ? 'factura' : 'presupuesto')} (Word)</button></div>`);
   const pn = (v) => parseFloat(String(v === undefined ? '' : v).replace(/\./g, '').replace(',', '.')) || 0;
   const pnum = (v) => (String(v).includes(',') ? pn(v) : parseFloat(v) || 0);
@@ -534,17 +569,21 @@ async function vDoc(id, tipo, desdeId, editId) {
     if (vacia) lineas = [nl]; else lineas.push(nl); drawL();
   });
   drawL();
+  const salSel = $('#d_salida'); { let pref = 'ambos'; try { pref = localStorage.getItem('gf-salida') || 'ambos'; } catch (e) {} salSel.value = edit && edit.pdf_id ? 'ambos' : pref; }
   $('#gen').onclick = async () => {
     const btn = $('#gen'); btn.disabled = true; btn.textContent = 'Generando…';
     const body = { tipo, num: $('#d_num').value, fecha: $('#d_fecha').value, ivaPct: $('#d_iva').value, objeto: $('#d_obj').value,
       cnome: $('#d_cnome').value, cnif: $('#d_cnif').value, cdir: $('#d_cdir').value, ccp: $('#d_ccp').value, notas: $('#d_notas').value,
-      lineas: lineas.map((l) => ({ ud: l.ud, concepto: l.concepto, precio: pnum(l.precio), subtotal: pnum(l.subtotal) })) };
+      lineas: lineas.map((l) => ({ ud: l.ud, concepto: l.concepto, precio: pnum(l.precio), subtotal: pnum(l.subtotal) })), pdf: salSel.value !== 'word' };
     if (esF) body.banco = $('#d_banco').value;
     else { body.validez = $('#d_val').value; body.modalidadePago = $('#d_pago').value; body.pagoUnico = body.pago1 = String(pn($('#d_p1').value) || ''); body.pago2 = String(pn($('#d_p2').value) || ''); body.pago3 = String(pn($('#d_p3').value) || ''); if (body.modalidadePago === 'unico') body.pago1 = ''; }
     try {
       const r = edit ? await api(`/documentos/${editId}`, { method: 'PUT', body }) : await api(`/trabajos/${id}/generar`, { method: 'POST', body });
       toast((esF ? 'Factura ' : 'Presupuesto ') + r.numero + (edit ? ' guardado' : ' generado'));
-      const a = document.createElement('a'); a.href = fileURL(r.archivo_id, '&descargar=1'); a.download = r.nombre; document.body.appendChild(a); a.click(); a.remove();
+      const sal = salSel.value; try { localStorage.setItem('gf-salida', sal); } catch (e) {}
+      if (r.pdf_error) toast('Guardado, pero no se pudo crear el PDF: ' + r.pdf_error);
+      if (sal !== 'pdf') descargar(r.archivo_id, r.nombre);
+      if (sal !== 'word' && r.pdf_id) setTimeout(() => descargar(r.pdf_id, r.pdf_nombre), 700);
       location.hash = '#/t/' + id;
     } catch (er) { toast(er.message); btn.disabled = false; btn.textContent = (edit ? 'Guardar cambios' : 'Generar ' + (esF ? 'factura' : 'presupuesto')) + ' (Word)'; }
   };
@@ -581,7 +620,7 @@ async function vNuevo(clienteId) {
           <label class="field">Cómo llegó<select id="t_ori">${ORIGENES.map((x) => `<option>${x}</option>`).join('')}</select></label>
           <label class="field full">Qué hay que hacer<textarea id="t_desc" rows="3" placeholder="Ej.: cambiar Velux del baño, SK06; entra agua por la chimenea…"></textarea></label>
           <label class="field full">Dirección de la obra (vacío = la del cliente)<input id="t_dir" type="text"></label>
-          <label class="field">Estado inicial<select id="t_est">${ESTADOS.slice(0, 5).map((x, i) => `<option value="${i}">${x}</option>`).join('')}</select></label>
+          <label class="field">Estado inicial<select id="t_est">${ESTADOS.map((x, i) => `<option value="${i}">${x}</option>`).join('')}</select></label>
         </div>
       </section>
       <div style="display:flex;justify-content:flex-end"><button class="btn acc" id="save" style="height:50px;padding:0 24px">Crear trabajo</button></div>`);
@@ -680,6 +719,10 @@ function vAjustes() {
       <div><button class="btn" id="calSync">Sincronizar ahora</button></div>
     </section>
     <section class="card pad" style="display:flex;flex-direction:column;gap:10px">
+      <h2>PDF</h2>
+      <p id="pdfEst" style="margin:0;font-size:14px;line-height:1.5;color:var(--ink2)">Comprobando…</p>
+    </section>
+    <section class="card pad" style="display:flex;flex-direction:column;gap:10px">
       <h2>Exportar</h2>
       <div style="display:flex;flex-wrap:wrap;gap:8px">
         <a class="btn" href="${API}/export/clientes.csv?token=${encodeURIComponent(token())}">Clientes (Excel/CSV)</a>
@@ -700,6 +743,7 @@ function vAjustes() {
   };
   const calPinta = (e) => { $('#calEst').innerHTML = e.conectado ? `Conectado al calendario <b>«${esc(e.calendario)}»</b>. Visitas, montajes, recordatorios de cobro (15 días tras la factura) y seguimiento de presupuestos (7 días tras enviarlo). Si mueves o borras un evento en el iPhone o el Mac, la ficha se actualiza en unos minutos.${e.ultimoPull ? ' Última lectura: ' + fdt(e.ultimoPull) + '.' : ''}` : `<span style="color:var(--red)">${esc(e.error || 'Sin conectar')}</span>`; };
   api('/calendario').then(calPinta).catch(() => {});
+  api('/pdf-estado').then((e) => { $('#pdfEst').innerHTML = e.disponible ? `Listo (${esc(e.motor)}). Los presupuestos y facturas se pueden guardar también en PDF, y cualquier Word guardado se convierte con su botón «Crear PDF».` : '<span style="color:var(--red)">El servidor todavía no tiene el conversor a PDF instalado.</span>'; }).catch(() => {});
   $('#calSync').onclick = async () => { $('#calEst').textContent = 'Sincronizando…'; const r = await api('/calendario/sincronizar', { method: 'POST' }).catch((e) => ({ ok: false, error: e.message })); const e = await api('/calendario'); calPinta(e); toast(r.ok ? `Calendario al día (${r.trabajos} trabajos)` : (r.error || 'Error')); };
   $('#clave').onclick = async () => { const r = await api('/clave-mac', { method: 'POST' }); const ta = $('#claveTxt'); ta.style.display = 'block'; ta.value = r.token; ta.select(); };
   $('#out').onclick = () => { localStorage.removeItem('gf-token'); render(); };
