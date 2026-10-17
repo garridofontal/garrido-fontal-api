@@ -6,6 +6,7 @@ const fs      = require('fs');
 const path    = require('path');
 const { q, pool } = require('./db');
 const calendario = require('./calendario');
+const pdf = require('./pdf');
 const multer  = require('multer');
 const { Packer } = require('docx');
 const { buildPresuposto } = require('./builders/presuposto');
@@ -14,7 +15,8 @@ const { readPresuposto }  = require('./builders/readPresuposto');
 const subida = multer({ storage: multer.memoryStorage(), limits: { fileSize: 25 * 1024 * 1024, files: 20 } });
 
 const router = express.Router();
-const ESTADOS = ['Contacto', 'Pendiente de ver', 'Pendiente de presupuesto', 'Pendiente de hacer', 'Pendiente de cobrar', 'Terminado'];
+const ESTADOS = ['Contacto', 'Visita', 'Presupuesto', 'Contrato', 'Instalación', 'Cobro'];
+const TIPOS = ['Velux', 'Mantenimiento', 'Accesorios', 'Reparación'];
 
 // ── Autenticación por PIN ───────────────────────────────────────────────────
 function secret() {
@@ -58,14 +60,23 @@ const wrap = (fn) => (req, res) => fn(req, res).catch((e) => { console.error(e);
 const num = (v) => (v === null || v === undefined ? 0 : parseFloat(v));
 
 // ── Resumen para la pantalla de inicio ──────────────────────────────────────
-router.get('/resumen', wrap(async (_req, res) => {
-  const c = await q(`SELECT estado, count(*)::int n FROM trabajos WHERE cancelado_en IS NULL GROUP BY estado`);
-  const cancel = await q(`SELECT count(*)::int n FROM trabajos WHERE cancelado_en IS NOT NULL`);
+router.get('/resumen', wrap(async (req, res) => {
+  const tipo = req.query.tipo && req.query.tipo !== 'Todos' ? req.query.tipo : null;
+  const p = tipo ? [tipo] : [];
+  const f = tipo ? ' AND tipo=$1' : '';
+  const abiertos = `cancelado_en IS NULL AND cerrado_en IS NULL`;
+  const c = await q(`SELECT estado, count(*)::int n FROM trabajos WHERE ${abiertos}${f} GROUP BY estado`, p);
+  const cerr = await q(`SELECT count(*)::int n FROM trabajos WHERE cancelado_en IS NULL AND cerrado_en IS NOT NULL${f}`, p);
+  const cancel = await q(`SELECT count(*)::int n FROM trabajos WHERE cancelado_en IS NOT NULL${f}`, p);
   const cobrar = await q(`SELECT coalesce(sum(d.base),0) s FROM documentos d JOIN trabajos t ON t.id=d.trabajo_id
-                          WHERE d.tipo='factura' AND t.estado=4 AND t.cancelado_en IS NULL`);
+                          WHERE d.tipo='factura' AND t.estado=5 AND t.cancelado_en IS NULL AND t.cerrado_en IS NULL${tipo ? ' AND t.tipo=$1' : ''}`, p);
+  const mix = await q(`SELECT estado, tipo, count(*)::int n FROM trabajos WHERE ${abiertos} GROUP BY estado, tipo`);
   const porEstado = ESTADOS.map(() => 0);
   c.rows.forEach((r) => { porEstado[r.estado] = r.n; });
-  res.json({ estados: ESTADOS, porEstado, cancelados: cancel.rows[0].n, porCobrar: num(cobrar.rows[0].s) });
+  const porEstadoTipo = ESTADOS.map(() => ({}));
+  const porTipo = {}; TIPOS.forEach((t) => { porTipo[t] = 0; });
+  mix.rows.forEach((r) => { if (porEstadoTipo[r.estado]) porEstadoTipo[r.estado][r.tipo] = r.n; porTipo[r.tipo] = (porTipo[r.tipo] || 0) + r.n; });
+  res.json({ estados: ESTADOS, tipos: TIPOS, porEstado, porEstadoTipo, porTipo, cerrados: cerr.rows[0].n, cancelados: cancel.rows[0].n, porCobrar: num(cobrar.rows[0].s) });
 }));
 
 // ── Trabajos ────────────────────────────────────────────────────────────────
@@ -79,8 +90,8 @@ const TRABAJO_SELECT = `
 router.get('/trabajos', wrap(async (req, res) => {
   const { tab = 'open', estado, tipo, q: texto, orden } = req.query;
   const w = []; const p = [];
-  if (tab === 'open') w.push('t.cancelado_en IS NULL AND t.estado < 5');
-  else if (tab === 'done') w.push('t.cancelado_en IS NULL AND t.estado = 5');
+  if (tab === 'open') w.push('t.cancelado_en IS NULL AND t.cerrado_en IS NULL');
+  else if (tab === 'done') w.push('t.cancelado_en IS NULL AND t.cerrado_en IS NOT NULL');
   else if (tab === 'cancel') w.push('t.cancelado_en IS NOT NULL');
   if (estado !== undefined && estado !== '') { p.push(+estado); w.push(`t.estado = $${p.length}`); }
   if (tipo && tipo !== 'Todos') { p.push(tipo); w.push(`t.tipo = $${p.length}`); }
@@ -140,9 +151,23 @@ router.patch('/trabajos/:id', wrap(async (req, res) => {
 router.post('/trabajos/:id/estado', wrap(async (req, res) => {
   const e = +(req.body || {}).estado;
   if (!(e >= 0 && e <= 5)) return res.status(400).json({ error: 'Estado non válido' });
-  await q(`UPDATE trabajos SET estado=$1, cancelado_en=NULL, actualizado=now() WHERE id=$2`, [e, req.params.id]);
+  await q(`UPDATE trabajos SET estado=$1, cancelado_en=NULL, cerrado_en=NULL, actualizado=now() WHERE id=$2`, [e, req.params.id]);
   await q(`INSERT INTO trabajo_eventos (trabajo_id,tipo,estado,texto) VALUES ($1,'estado',$2,$3)`, [req.params.id, e, 'Estado cambiado – ' + ESTADOS[e]]);
-  if (e === 5) await q(`UPDATE documentos SET cobrada=true, cobrada_en=coalesce(cobrada_en,current_date) WHERE trabajo_id=$1 AND tipo='factura'`, [req.params.id]);
+  calendario.alCambiar(+req.params.id);
+  res.json({ ok: true });
+}));
+
+// Cobrado: el trabajo se cierra (pasa a «Cerrados»)
+router.post('/trabajos/:id/cobrado', wrap(async (req, res) => {
+  await q(`UPDATE trabajos SET estado=5, cerrado_en=now(), cancelado_en=NULL, actualizado=now() WHERE id=$1`, [req.params.id]);
+  await q(`UPDATE documentos SET cobrada=true, cobrada_en=coalesce(cobrada_en,current_date) WHERE trabajo_id=$1 AND tipo='factura'`, [req.params.id]);
+  await q(`INSERT INTO trabajo_eventos (trabajo_id,tipo,estado,texto) VALUES ($1,'estado',5,'Cobrado – trabajo cerrado')`, [req.params.id]);
+  calendario.alCambiar(+req.params.id);
+  res.json({ ok: true });
+}));
+router.post('/trabajos/:id/reabrir', wrap(async (req, res) => {
+  await q(`UPDATE trabajos SET cerrado_en=NULL, actualizado=now() WHERE id=$1`, [req.params.id]);
+  await q(`INSERT INTO trabajo_eventos (trabajo_id,tipo,estado,texto) VALUES ($1,'estado',5,'Trabajo reabierto (Cobro)')`, [req.params.id]);
   calendario.alCambiar(+req.params.id);
   res.json({ ok: true });
 }));
@@ -202,7 +227,7 @@ router.get('/clientes/:id', wrap(async (req, res) => {
   const c = await q(`SELECT * FROM clientes WHERE id=$1`, [req.params.id]);
   if (!c.rows[0]) return res.status(404).json({ error: 'Non existe' });
   const d = await q(`SELECT * FROM documentos WHERE cliente_id=$1 ORDER BY fecha DESC NULLS LAST`, [req.params.id]);
-  const t = await q(`SELECT id,codigo,tipo,estado,cancelado_en,descripcion,creado FROM trabajos WHERE cliente_id=$1 ORDER BY creado DESC`, [req.params.id]);
+  const t = await q(`SELECT id,codigo,tipo,estado,cancelado_en,cerrado_en,descripcion,creado FROM trabajos WHERE cliente_id=$1 ORDER BY creado DESC`, [req.params.id]);
   res.json({ ...c.rows[0], documentos: d.rows, trabajos: t.rows });
 }));
 router.patch('/clientes/:id', wrap(async (req, res) => {
@@ -291,6 +316,7 @@ router.get('/archivos/:id', wrap(async (req, res) => {
 }));
 router.delete('/archivos/:id', wrap(async (req, res) => {
   await q(`UPDATE documentos SET archivo_id=NULL WHERE archivo_id=$1`, [req.params.id]);
+  await q(`UPDATE documentos SET pdf_id=NULL WHERE pdf_id=$1`, [req.params.id]);
   await q(`DELETE FROM archivos WHERE id=$1`, [req.params.id]);
   res.json({ ok: true });
 }));
@@ -355,6 +381,21 @@ async function armarDocumento(t, b, tipo, numero) {
 const DOCX_MIME = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
 const wrapDoc = (fn) => wrap(async (req, res) => { try { await fn(req, res); } catch (e) { if (e instanceof ErrorHttp) return res.status(e.st).json({ error: e.message }); throw e; } });
 
+// Crea el PDF de un Word y lo guarda como archivo del trabajo. Si falla no rompe nada: devuelve el motivo.
+async function guardarPdf(t, tipo, nombreDocx, buf) {
+  try {
+    const pdfBuf = await pdf.docxAPdf(buf);
+    const nombre = nombreDocx.replace(/\.docx?$/i, '') + '.pdf';
+    const a = await q(`INSERT INTO archivos (trabajo_id,cliente_id,tipo,nombre,mime,tamano,datos) VALUES ($1,$2,$3,$4,'application/pdf',$5,$6) RETURNING id`,
+      [t.id, t.cliente_id, tipo, nombre, pdfBuf.length, pdfBuf]);
+    return { id: a.rows[0].id, nombre };
+  } catch (e) { console.error('PDF:', e.message); return { error: e.message }; }
+}
+async function ponerEstado(id, e) {
+  await q(`UPDATE trabajos SET estado=$1, actualizado=now() WHERE id=$2`, [e, id]);
+  await q(`INSERT INTO trabajo_eventos (trabajo_id,tipo,estado,texto) VALUES ($1,'estado',$2,$3)`, [id, e, 'Estado cambiado – ' + ESTADOS[e]]);
+}
+
 router.post('/trabajos/:id/generar', wrapDoc(async (req, res) => {
   const b = req.body || {};
   const tipo = b.tipo === 'factura' ? 'factura' : 'presupuesto';
@@ -368,20 +409,18 @@ router.post('/trabajos/:id/generar', wrapDoc(async (req, res) => {
   const { lineas, ivaPct, base, total, payload, buf, nombre } = await armarDocumento(t, b, tipo, numero);
   const a = await q(`INSERT INTO archivos (trabajo_id,cliente_id,tipo,nombre,mime,tamano,datos) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id`,
     [t.id, t.cliente_id, tipo, nombre, DOCX_MIME, buf.length, buf]);
-  const d = await q(`INSERT INTO documentos (tipo,numero,fecha,base,total,origen,cliente_id,trabajo_id,lineas,iva_pct,datos,archivo_id)
-     VALUES ($1,$2,$3,$4,$5,'app',$6,$7,$8,$9,$10,$11) RETURNING id`,
-    [tipo, numero, payload.fecha, base, total, t.cliente_id, t.id, JSON.stringify(lineas), ivaPct, JSON.stringify(payload), a.rows[0].id]);
+  const pdfRes = b.pdf === false ? {} : await guardarPdf(t, tipo, nombre, buf);
+  const d = await q(`INSERT INTO documentos (tipo,numero,fecha,base,total,origen,cliente_id,trabajo_id,lineas,iva_pct,datos,archivo_id,pdf_id)
+     VALUES ($1,$2,$3,$4,$5,'app',$6,$7,$8,$9,$10,$11,$12) RETURNING id`,
+    [tipo, numero, payload.fecha, base, total, t.cliente_id, t.id, JSON.stringify(lineas), ivaPct, JSON.stringify(payload), a.rows[0].id, pdfRes.id || null]);
   await q(`INSERT INTO trabajo_eventos (trabajo_id,tipo,texto) VALUES ($1,'documento',$2)`, [t.id, `${cap(tipo)} ${numero} generad${tipo === 'factura' ? 'a' : 'o'} (${base.toFixed(2).replace('.', ',')} € base)`]);
-  if (tipo === 'factura' && t.estado < 4 && !t.cancelado_en) {
-    await q(`UPDATE trabajos SET estado=4, actualizado=now() WHERE id=$1`, [t.id]);
-    await q(`INSERT INTO trabajo_eventos (trabajo_id,tipo,estado,texto) VALUES ($1,'estado',4,$2)`, [t.id, 'Estado cambiado – ' + ESTADOS[4]]);
-  }
-  if (tipo === 'presupuesto' && t.estado < 2 && !t.cancelado_en) {
-    await q(`UPDATE trabajos SET estado=2, actualizado=now() WHERE id=$1`, [t.id]);
-    await q(`INSERT INTO trabajo_eventos (trabajo_id,tipo,estado,texto) VALUES ($1,'estado',2,$2)`, [t.id, 'Estado cambiado – ' + ESTADOS[2]]);
+  if (!t.cancelado_en && !t.cerrado_en) {
+    // Presupuesto → fase Presupuesto. Factura del material → Contrato; factura final (en Instalación) → Cobro.
+    const nuevo = tipo === 'presupuesto' ? (t.estado < 2 ? 2 : null) : (t.estado < 3 ? 3 : t.estado === 4 ? 5 : null);
+    if (nuevo !== null) await ponerEstado(t.id, nuevo);
   }
   calendario.alCambiar(t.id);
-  res.json({ ok: true, documento_id: d.rows[0].id, archivo_id: a.rows[0].id, numero, nombre });
+  res.json({ ok: true, documento_id: d.rows[0].id, archivo_id: a.rows[0].id, numero, nombre, pdf_id: pdfRes.id || null, pdf_nombre: pdfRes.nombre || null, pdf_error: pdfRes.error || null });
 }));
 
 // Modificar un presupuesto o factura ya hecho: se rehace el Word con los datos nuevos
@@ -401,12 +440,14 @@ router.put('/documentos/:id', wrapDoc(async (req, res) => {
   // archivo nuevo (así la copia del Mac se actualiza) y se borra el anterior
   const a = await q(`INSERT INTO archivos (trabajo_id,cliente_id,tipo,nombre,mime,tamano,datos) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id`,
     [t.id, t.cliente_id, tipo, nombre, DOCX_MIME, buf.length, buf]);
-  await q(`UPDATE documentos SET numero=$1, fecha=$2, base=$3, total=$4, lineas=$5, iva_pct=$6, datos=$7, archivo_id=$8, origen='app' WHERE id=$9`,
-    [numero, payload.fecha, base, total, JSON.stringify(lineas), ivaPct, JSON.stringify(payload), a.rows[0].id, d0.id]);
+  const pdfRes = b.pdf === true ? await guardarPdf(t, tipo, nombre, buf) : {};   // el PDF anterior ya no vale: se rehace o se quita
+  await q(`UPDATE documentos SET numero=$1, fecha=$2, base=$3, total=$4, lineas=$5, iva_pct=$6, datos=$7, archivo_id=$8, pdf_id=$9, origen='app' WHERE id=$10`,
+    [numero, payload.fecha, base, total, JSON.stringify(lineas), ivaPct, JSON.stringify(payload), a.rows[0].id, pdfRes.id || null, d0.id]);
   if (d0.archivo_id) await q(`DELETE FROM archivos WHERE id=$1`, [d0.archivo_id]);
+  if (d0.pdf_id) await q(`DELETE FROM archivos WHERE id=$1`, [d0.pdf_id]);
   await q(`INSERT INTO trabajo_eventos (trabajo_id,tipo,texto) VALUES ($1,'documento',$2)`, [t.id, `${cap(tipo)} ${numero} modificad${tipo === 'factura' ? 'a' : 'o'} (${base.toFixed(2).replace('.', ',')} € base)`]);
   calendario.alCambiar(t.id);
-  res.json({ ok: true, documento_id: d0.id, archivo_id: a.rows[0].id, numero, nombre });
+  res.json({ ok: true, documento_id: d0.id, archivo_id: a.rows[0].id, numero, nombre, pdf_id: pdfRes.id || null, pdf_nombre: pdfRes.nombre || null, pdf_error: pdfRes.error || null });
 }));
 router.get('/documentos/:id', wrap(async (req, res) => {
   const r = await q(`SELECT * FROM documentos WHERE id=$1`, [req.params.id]);
@@ -417,6 +458,29 @@ router.post('/documentos/:id/cobrada', wrap(async (req, res) => {
   const v = !!(req.body || {}).cobrada;
   await q(`UPDATE documentos SET cobrada=$1, cobrada_en=CASE WHEN $1 THEN current_date ELSE NULL END WHERE id=$2`, [v, req.params.id]);
   res.json({ ok: true });
+}));
+
+// ── PDF ─────────────────────────────────────────────────────────────────────
+router.get('/pdf-estado', wrap(async (_req, res) => res.json(await pdf.estado())));
+// Convierte a PDF un Word guardado (presupuesto, factura u otro .docx). Si ya existe el PDF, lo devuelve.
+router.post('/archivos/:id/pdf', wrap(async (req, res) => {
+  const a = (await q(`SELECT id,trabajo_id,cliente_id,tipo,nombre,datos FROM archivos WHERE id=$1`, [req.params.id])).rows[0];
+  if (!a) return res.status(404).json({ error: 'Non existe' });
+  if (!/\.docx$/i.test(a.nombre)) return res.status(400).json({ error: 'Solo se pueden convertir archivos Word (.docx)' });
+  const nombrePdf = a.nombre.replace(/\.docx$/i, '.pdf');
+  if (req.query.forzar !== '1') {
+    const l = await q(`SELECT pdf_id FROM documentos WHERE archivo_id=$1 AND pdf_id IS NOT NULL LIMIT 1`, [a.id]);
+    if (l.rows[0]) return res.json({ ok: true, archivo_id: l.rows[0].pdf_id, nombre: nombrePdf, existente: true });
+    const n = await q(`SELECT id FROM archivos WHERE trabajo_id IS NOT DISTINCT FROM $1 AND nombre=$2 AND mime='application/pdf' ORDER BY id DESC LIMIT 1`, [a.trabajo_id, nombrePdf]);
+    if (n.rows[0]) return res.json({ ok: true, archivo_id: n.rows[0].id, nombre: nombrePdf, existente: true });
+  }
+  let pdfBuf;
+  try { pdfBuf = await pdf.docxAPdf(a.datos); } catch (e) { return res.status(502).json({ error: 'No se pudo crear el PDF: ' + e.message }); }
+  const n = await q(`INSERT INTO archivos (trabajo_id,cliente_id,tipo,nombre,mime,tamano,datos) VALUES ($1,$2,$3,$4,'application/pdf',$5,$6) RETURNING id`,
+    [a.trabajo_id, a.cliente_id, a.tipo, nombrePdf, pdfBuf.length, pdfBuf]);
+  await q(`UPDATE documentos SET pdf_id=$1 WHERE archivo_id=$2`, [n.rows[0].id, a.id]);
+  if (a.trabajo_id) await q(`INSERT INTO trabajo_eventos (trabajo_id,tipo,texto) VALUES ($1,'archivo',$2)`, [a.trabajo_id, `PDF creado: ${nombrePdf}`]);
+  res.json({ ok: true, archivo_id: n.rows[0].id, nombre: nombrePdf });
 }));
 
 // ── Calendario de iCloud ────────────────────────────────────────────────────

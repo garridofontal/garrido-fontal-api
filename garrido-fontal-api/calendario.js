@@ -102,17 +102,17 @@ function leerInicio(ics) {
 // ── Qué eventos debe tener cada trabajo ─────────────────────────────────────
 async function eventosDeseados(t) {
   const out = [];
-  if (t.cancelado_en) return out;
+  if (t.cancelado_en || t.cerrado_en) return out;
   const dir = [t.direccion_obra || t.direccion, [t.cp_obra || t.cp, t.concello_obra || t.concello].filter(Boolean).join(' ')].filter(Boolean).join(', ');
   const base = { dir, desc: [`${t.codigo} · ${t.tipo}`, t.descripcion, t.telefono ? 'Tel: ' + t.telefono : '', dir, APP_URL + '#/t/' + t.id].filter(Boolean).join('\n') };
   if (t.visita_en && t.estado <= 1) out.push({ ...base, tipo: 'visita', titulo: `Visita · ${t.cliente}`, inicio: new Date(t.visita_en), todoDia: false, campo: 'visita_en' });
-  if (t.montaje_en && t.estado <= 3) out.push({ ...base, tipo: 'montaje', titulo: `Montaje · ${t.cliente}`, inicio: new Date(t.montaje_en), todoDia: false, campo: 'montaje_en' });
+  if (t.montaje_en && t.estado <= 4) out.push({ ...base, tipo: 'montaje', titulo: `Instalación · ${t.cliente}`, inicio: new Date(t.montaje_en), todoDia: false, campo: 'montaje_en' });
   const hoy = diaUTC(fechaMadrid(new Date()));
   if (t.estado === 2 && t.presupuesto_enviado) {
     let d = sumarDias(diaUTC(fechaMadrid(new Date(t.presupuesto_enviado))), DIAS_SEGUIMIENTO); if (d < hoy) d = sumarDias(hoy, 1);
     out.push({ ...base, tipo: 'seguimiento', titulo: `Seguimiento presupuesto · ${t.cliente}`, inicio: d, todoDia: true, recordatorio: true });
   }
-  if (t.estado === 4) {
+  if (t.estado === 5) {
     const f = await q(`SELECT numero, fecha, total FROM documentos WHERE trabajo_id=$1 AND tipo='factura' ORDER BY fecha DESC NULLS LAST LIMIT 1`, [t.id]);
     if (f.rows[0]) {
       let d = sumarDias(diaUTC(fechaMadrid(f.rows[0].fecha || new Date())), DIAS_COBRO); if (d < hoy) d = sumarDias(hoy, 1);
@@ -191,7 +191,7 @@ async function pull() {
         await q(`UPDATE trabajos SET ${f.tipo}_en=NULL, actualizado=now() WHERE id=$1`, [f.trabajo_id]);
         await q(`DELETE FROM eventos_cal WHERE id=$1`, [f.id]);
       } else await q(`UPDATE eventos_cal SET descartado=true, actualizado=now() WHERE id=$1`, [f.id]);
-      await q(`INSERT INTO trabajo_eventos (trabajo_id,tipo,texto) VALUES ($1,'calendario',$2)`, [f.trabajo_id, `${nombreTipo(f.tipo)} ${f.tipo === 'visita' ? 'borrada' : 'borrado'} en el calendario`]);
+      await q(`INSERT INTO trabajo_eventos (trabajo_id,tipo,texto) VALUES ($1,'calendario',$2)`, [f.trabajo_id, `${nombreTipo(f.tipo)} ${(f.tipo === 'visita' || f.tipo === 'montaje') ? 'borrada' : 'borrado'} en el calendario`]);
       cambios++; continue;
     }
     if (o.etag && o.etag === f.etag) continue;
@@ -202,26 +202,26 @@ async function pull() {
     await q(`UPDATE eventos_cal SET inicio=$1, todo_dia=$2, etag=$3, firma=NULL, url=$4, actualizado=now() WHERE id=$5`, [ini.fecha, ini.todoDia, o.etag, o.url, f.id]);
     const txt = ini.todoDia ? ini.fecha.toISOString().slice(0, 10).split('-').reverse().join('/')
       : new Intl.DateTimeFormat('es-ES', { timeZone: TZ, day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }).format(ini.fecha);
-    await q(`INSERT INTO trabajo_eventos (trabajo_id,tipo,texto) VALUES ($1,'calendario',$2)`, [f.trabajo_id, `${nombreTipo(f.tipo)} ${f.tipo === 'visita' ? 'movida' : 'movido'} en el calendario al ${txt}`]);
+    await q(`INSERT INTO trabajo_eventos (trabajo_id,tipo,texto) VALUES ($1,'calendario',$2)`, [f.trabajo_id, `${nombreTipo(f.tipo)} ${(f.tipo === 'visita' || f.tipo === 'montaje') ? 'movida' : 'movido'} en el calendario al ${txt}`]);
     cambios++;
     alCambiar(f.trabajo_id);                                 // reescribe el evento con nuestro formato y etag nuevo
   }
   estado.ultimoPull = new Date();
   return { cambios };
 }
-const nombreTipo = (t) => ({ visita: 'Visita', montaje: 'Montaje', cobro: 'Recordatorio de cobro', seguimiento: 'Seguimiento de presupuesto' }[t] || t);
+const nombreTipo = (t) => ({ visita: 'Visita', montaje: 'Instalación', cobro: 'Recordatorio de cobro', seguimiento: 'Seguimiento de presupuesto' }[t] || t);
 
 async function sincronizarTodo() {
   const cal = await conectar(); if (!cal) return { ok: false, error: estado.error };
   const p = await pull();
-  const ids = (await q(`SELECT id FROM trabajos WHERE cancelado_en IS NULL AND estado < 5 UNION SELECT trabajo_id FROM eventos_cal`)).rows.map((r) => r.id);
+  const ids = (await q(`SELECT id FROM trabajos WHERE cancelado_en IS NULL AND cerrado_en IS NULL UNION SELECT trabajo_id FROM eventos_cal`)).rows.map((r) => r.id);
   for (const id of ids) await pushTrabajo(id);
   return { ok: true, trabajos: ids.length, cambiosDesdeCalendario: p.cambios };
 }
 
 // Agenda de los próximos días (para la pantalla de inicio), con o sin iCloud
 async function agenda(dias = 21) {
-  const r = await q(`${TRABAJO_SQL} WHERE t.cancelado_en IS NULL AND t.estado < 5`);
+  const r = await q(`${TRABAJO_SQL} WHERE t.cancelado_en IS NULL AND t.cerrado_en IS NULL`);
   const hasta = Date.now() + dias * 864e5, desde = Date.now() - 864e5;
   const guard = (await q(`SELECT trabajo_id, tipo, inicio, descartado FROM eventos_cal`)).rows;
   const out = [];

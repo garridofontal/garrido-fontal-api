@@ -93,8 +93,34 @@ async function migrate() {
     CREATE INDEX IF NOT EXISTS trabajos_estado ON trabajos (estado);
     CREATE INDEX IF NOT EXISTS eventos_trabajo ON trabajo_eventos (trabajo_id);
     CREATE INDEX IF NOT EXISTS documentos_cliente ON documentos (cliente_id);
+    ALTER TABLE trabajos ADD COLUMN IF NOT EXISTS cerrado_en TIMESTAMPTZ;
+    ALTER TABLE documentos ADD COLUMN IF NOT EXISTS pdf_id INTEGER REFERENCES archivos(id) ON DELETE SET NULL;
+    CREATE TABLE IF NOT EXISTS meta (clave TEXT PRIMARY KEY, valor TEXT, fecha TIMESTAMPTZ NOT NULL DEFAULT now());
   `);
+  await migrarFases();
   console.log('Organizador: base de datos lista');
+}
+
+// Fases nuevas: 0 Contacto · 1 Visita · 2 Presupuesto · 3 Contrato · 4 Instalación · 5 Cobro (+ «cobrado» = trabajo cerrado)
+// Antes: 0 Contacto · 1 Pendiente de ver · 2 Pendiente de presupuesto · 3 Pendiente de hacer · 4 Pendiente de cobrar · 5 Terminado
+// Tipos nuevos: Velux · Mantenimiento · Accesorios · Reparación. Se ejecuta una sola vez.
+// Nombre nuevo que corresponde a cada número de fase antiguo (para reescribir el historial)
+const NOMBRES_ANTIGUOS = ['Contacto', 'Visita', 'Presupuesto', 'Contrato', 'Cobro', 'Cobrado'];
+async function migrarFases() {
+  if ((await q(`SELECT 1 FROM meta WHERE clave='fases_v2'`)).rows.length) return;
+  const cli = await pool.connect();
+  try {
+    await cli.query('BEGIN');
+    await cli.query(`UPDATE trabajos SET cerrado_en = coalesce(actualizado, now()) WHERE estado = 5 AND cerrado_en IS NULL`);
+    await cli.query(`UPDATE trabajo_eventos SET texto = 'Estado cambiado – ' || ($1::text[])[estado + 1] WHERE tipo = 'estado' AND estado BETWEEN 0 AND 5`, [NOMBRES_ANTIGUOS]);
+    await cli.query(`UPDATE trabajos SET estado = 5 WHERE estado = 4`);
+    await cli.query(`UPDATE trabajo_eventos SET estado = 5 WHERE tipo = 'estado' AND estado = 4`);
+    await cli.query(`UPDATE trabajos SET tipo = CASE tipo WHEN 'Cubierta' THEN 'Mantenimiento' WHEN 'Gotera' THEN 'Reparación' ELSE 'Reparación' END
+                     WHERE tipo NOT IN ('Velux', 'Mantenimiento', 'Accesorios', 'Reparación')`);
+    await cli.query(`INSERT INTO meta (clave, valor) VALUES ('fases_v2', 'ok')`);
+    await cli.query('COMMIT');
+    console.log('Organizador: fases y tipos migrados');
+  } catch (e) { await cli.query('ROLLBACK'); throw e; } finally { cli.release(); }
 }
 
 module.exports = { pool, q, migrate };
