@@ -257,6 +257,17 @@
     .converter-drop strong { display: block; font-size: 15px; margin-bottom: 6px; }
     .converter-drop span { font-size: 12px; color: var(--muted); }
     .converter-drop input[type="file"] { display: none; }
+    .buscador { position: relative; }
+    .sugerencias { position: absolute; left: 0; right: 0; top: 100%; z-index: 50; background: var(--white); border: 1px solid var(--border); border-radius: 0 0 var(--radius) var(--radius); box-shadow: 0 8px 20px rgba(0,0,0,.08); max-height: 280px; overflow-y: auto; display: none; }
+    .sugerencias.show { display: block; }
+    .sug { padding: 10px 12px; cursor: pointer; border-bottom: 1px solid var(--light); }
+    .sug:last-child { border-bottom: none; }
+    .sug:hover, .sug.sel { background: var(--light); }
+    .sug strong { display: block; font-size: 13px; }
+    .sug span { font-size: 12px; color: var(--muted); }
+    .sug.nuevo { color: var(--dark); font-weight: 600; }
+    .cliente-tag { font-size: 11px; color: var(--success); margin-top: 4px; display: none; }
+    .cliente-tag.show { display: block; }
     @media (max-width: 600px) {
       main { padding: 12px; }
       .tabs { grid-template-columns: 1fr; }
@@ -273,6 +284,7 @@
     <h1>Garrido Fontal SLU</h1>
     <p>Generador de presupuestos y facturas</p>
   </div>
+  <button onclick="cerrarSesion()" title="Cerrar sesión" style="margin-left:auto;background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.25);border-radius:8px;padding:8px 12px;font-size:12px;cursor:pointer;font-family:inherit">Salir</button>
 </header>
 
 <main>
@@ -304,9 +316,11 @@
 
     <div class="section">
       <div class="section-title">Cliente</div>
-      <div class="row-1 field">
-        <label>Nombre</label>
-        <input type="text" id="p-cnome" placeholder="Comunidad de Propietarios..." />
+      <div class="row-1 field buscador">
+        <label>Nombre <span style="font-weight:400;opacity:.7">— escribe para buscar en el fichero de clientes</span></label>
+        <input type="text" id="p-cnome" placeholder="Comunidad de Propietarios..." autocomplete="off" />
+        <div class="sugerencias" id="p-sug"></div>
+        <div class="cliente-tag" id="p-ctag"></div>
       </div>
       <div class="row-2">
         <div class="field">
@@ -415,9 +429,11 @@
 
     <div class="section">
       <div class="section-title">Cliente</div>
-      <div class="row-1 field">
-        <label>Nombre</label>
-        <input type="text" id="f-cnome" placeholder="Comunidad de Propietarios..." />
+      <div class="row-1 field buscador">
+        <label>Nombre <span style="font-weight:400;opacity:.7">— escribe para buscar en el fichero de clientes</span></label>
+        <input type="text" id="f-cnome" placeholder="Comunidad de Propietarios..." autocomplete="off" />
+        <div class="sugerencias" id="f-sug"></div>
+        <div class="cliente-tag" id="f-ctag"></div>
       </div>
       <div class="row-2">
         <div class="field">
@@ -523,8 +539,8 @@
 <script>
 // ─── Estado ──────────────────────────────────────────────────────────────
 const state = {
-  p: { lineas: [], pagamento: 'unico' },
-  f: { lineas: [], banco: 'bbva' }
+  p: { lineas: [], pagamento: 'unico', clienteId: null },
+  f: { lineas: [], banco: 'bbva', clienteId: null }
 };
 
 // ─── Tabs ────────────────────────────────────────────────────────────────
@@ -562,7 +578,7 @@ function fechaPlus(dias) {
 
 // ─── Inicialización ──────────────────────────────────────────────────────
 document.getElementById('p-fecha').value = hoy();
-document.getElementById('p-validez').value = fechaPlus(90);
+document.getElementById('p-validez').value = fechaPlus(30);
 document.getElementById('f-fecha').value = hoy();
 addLinea('p');
 addLinea('f');
@@ -712,6 +728,7 @@ async function generarPresupuesto() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     });
+    if (resp.status === 401) { location.reload(); return; }
     if (!resp.ok) throw new Error('Error en el servidor');
     const blob = await resp.blob();
     const filename = 'Presupuesto_' + (payload.num || 'draft').replace(/\//g, '-') + '.docx';
@@ -720,6 +737,8 @@ async function generarPresupuesto() {
     a.href = url; a.download = filename; a.click();
     URL.revokeObjectURL(url);
     showStatus('p-status', '✓ Documento descargado: ' + filename, 'ok');
+    guardarCliente('p');
+    guardarDocumento('presupuesto', blob, filename, payload, 'p');
     setTimeout(() => hideStatus('p-status'), 4000);
   } catch (e) {
     showStatus('p-status', 'Error: ' + e.message, 'err');
@@ -764,6 +783,7 @@ async function generarFactura() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     });
+    if (resp.status === 401) { location.reload(); return; }
     if (!resp.ok) throw new Error('Error en el servidor');
     const blob = await resp.blob();
     const filename = 'Factura_' + (payload.num || 'draft').replace(/\//g, '-') + '.docx';
@@ -772,6 +792,8 @@ async function generarFactura() {
     a.href = url; a.download = filename; a.click();
     URL.revokeObjectURL(url);
     showStatus('f-status', '✓ Documento descargado: ' + filename, 'ok');
+    guardarCliente('f');
+    guardarDocumento('factura', blob, filename, payload, 'f');
     setTimeout(() => hideStatus('f-status'), 4000);
   } catch (e) {
     showStatus('f-status', 'Error: ' + e.message, 'err');
@@ -826,6 +848,7 @@ async function leerPresupuesto(inp) {
 }
 
 function cargarFactura(d) {
+  state.f.clienteId = null; setTag('f', '');
   document.getElementById('f-cnome').value = d.cnome || '';
   document.getElementById('f-cnif').value = d.cnif || '';
   document.getElementById('f-cdir').value = d.cdir || '';
@@ -851,6 +874,124 @@ function cargarFactura(d) {
   }
   calc('f');
 }
+
+// ─── Buscador de clientes (fichero de clientes) ──────────────────────────
+const CLI_CACHE = {};
+function esc(v) { return String(v || '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+function splitCp(v) {
+  const m = String(v || '').trim().match(/^(\d{5})\s*(.*)$/);
+  return m ? { cp: m[1], concello: m[2].trim() } : { cp: '', concello: String(v || '').trim() };
+}
+function setTag(px, msg) {
+  const t = document.getElementById(px + '-ctag');
+  t.textContent = msg;
+  t.classList.toggle('show', !!msg);
+}
+function initBuscador(px) {
+  const inp = document.getElementById(px + '-cnome');
+  const box = document.getElementById(px + '-sug');
+  let timer = null, items = [], sel = -1;
+  const close = () => { box.classList.remove('show'); box.innerHTML = ''; items = []; sel = -1; };
+  const render = () => {
+    const t = inp.value.trim();
+    let html = items.map((c, i) =>
+      '<div class="sug' + (i === sel ? ' sel' : '') + '" data-i="' + i + '"><strong>' + esc(c.nombre) + '</strong><span>' +
+      esc([c.cif, c.direccion, [c.cp, c.concello].filter(Boolean).join(' ')].filter(Boolean).join(' · ')) + '</span></div>'
+    ).join('');
+    html += '<div class="sug nuevo" data-i="-1">+ Cliente nuevo: «' + esc(t) + '» (rellena los datos; se guardará al generar)</div>';
+    box.innerHTML = html;
+    box.classList.add('show');
+  };
+  const pick = (i) => {
+    if (i >= 0 && items[i]) {
+      const c = items[i];
+      inp.value = c.nombre;
+      document.getElementById(px + '-cnif').value = c.cif || '';
+      document.getElementById(px + '-cdir').value = c.direccion || '';
+      document.getElementById(px + '-ccp').value = [c.cp, c.concello].filter(Boolean).join(' ');
+      state[px].clienteId = c.id;
+      setTag(px, '✓ Cliente del fichero' + (c.tipo ? ' · ' + c.tipo : ''));
+    } else {
+      state[px].clienteId = null;
+      setTag(px, 'Cliente nuevo — se guardará en el fichero al generar el documento');
+    }
+    close();
+  };
+  inp.addEventListener('input', () => {
+    state[px].clienteId = null; setTag(px, '');
+    const t = inp.value.trim();
+    clearTimeout(timer);
+    if (t.length < 2) { close(); return; }
+    timer = setTimeout(async () => {
+      try {
+        items = CLI_CACHE[t] || (CLI_CACHE[t] = await fetch('/api/clientes?q=' + encodeURIComponent(t)).then(r => r.json()));
+        if (!Array.isArray(items)) items = [];
+      } catch (e) { items = []; }
+      sel = -1; render();
+    }, 180);
+  });
+  inp.addEventListener('keydown', e => {
+    if (!box.classList.contains('show')) return;
+    if (e.key === 'ArrowDown') { e.preventDefault(); sel = Math.min(sel + 1, items.length - 1); render(); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); sel = Math.max(sel - 1, -1); render(); }
+    else if (e.key === 'Enter') { e.preventDefault(); pick(sel); }
+    else if (e.key === 'Escape') { close(); }
+  });
+  box.addEventListener('mousedown', e => {
+    const el = e.target.closest('.sug'); if (!el) return;
+    e.preventDefault(); pick(parseInt(el.dataset.i, 10));
+  });
+  inp.addEventListener('blur', () => setTimeout(close, 150));
+}
+async function guardarCliente(px) {
+  const nombre = document.getElementById(px + '-cnome').value.trim();
+  if (!nombre) return;
+  const cpv = splitCp(document.getElementById(px + '-ccp').value);
+  try {
+    const r = await fetch('/api/clientes', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: state[px].clienteId, nombre,
+        cif: document.getElementById(px + '-cnif').value.trim(),
+        direccion: document.getElementById(px + '-cdir').value.trim(),
+        cp: cpv.cp, concello: cpv.concello,
+      }),
+    }).then(r => r.json());
+    if (r && r.id) {
+      state[px].clienteId = r.id;
+      setTag(px, r.nuevo ? '✓ Cliente nuevo guardado en el fichero' : '✓ Cliente actualizado en el fichero');
+    }
+  } catch (e) { /* silencioso: no bloquea la generación */ }
+}
+
+// ─── Archivo de documentos en el servidor (copia de seguridad + sincronización iCloud) ──
+async function guardarDocumento(tipo, blob, filename, payload, px) {
+  try {
+    const fd = new FormData();
+    fd.append('file', blob, filename);
+    fd.append('tipo', tipo);
+    fd.append('numero', payload.num || '');
+    fd.append('fecha', payload.fecha || '');
+    fd.append('cliente_id', state[px].clienteId || '');
+    fd.append('cliente_nombre', payload.cnome || '');
+    fd.append('cif', payload.cnif || '');
+    fd.append('base', payload.base || '');
+    fd.append('iva_pct', payload.ivaPct || '');
+    fd.append('total', payload.total || '');
+    fd.append('datos', JSON.stringify(payload));
+    const r = await fetch('/api/xerador/guardar-doc', { method: 'POST', body: fd });
+    if (r.ok) {
+      const el = document.getElementById(px + '-status');
+      el.textContent = '✓ Documento descargado y archivado en el servidor: ' + filename;
+    }
+  } catch (e) { /* no bloquea */ }
+}
+async function cerrarSesion() {
+  await fetch('/api/xerador/logout', { method: 'POST' });
+  location.reload();
+}
+initBuscador('p');
+initBuscador('f');
 </script>
 </body>
 </html>
