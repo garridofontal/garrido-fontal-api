@@ -1,6 +1,6 @@
 // Ficheiro de Clientes — service worker
 // Sube la versión cada vez que cambien los datos para forzar la actualización.
-const VERSION = 'clientes-v22';
+const VERSION = 'clientes-v23';
 const ARCHIVOS = [
   './',
   './index.html',
